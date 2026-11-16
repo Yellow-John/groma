@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#161a33">
+<title>Groma</title>
+<meta name="description" content="Posti, eventi, meteo e notizie di Roma, aggiornati ogni mattina.">
+<meta name="robots" content="noindex,nofollow">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Groma">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:dark;
+  --bg:#161a33; --surface:#20264a; --surface2:#283062; --land:#1b2143; --park:#1d3a3c; --river:#35679e;
+  --road:#454f8c; --walls:#e8d9a8; --ink:#f1ead8; --muted:#a7a6c2; --line:#343b6b;
+  --c-cinema:#ff5e5b; --c-mercatini:#ffb400; --c-fotografia:#4fd1c5; --c-mostre:#a78bfa; --c-musica:#ff7ac6;
+  --ok:#7ee2a8; --no:#ff9d8f;
+  --display:"Big Shoulders Display","Arial Narrow","Roboto Condensed",Impact,sans-serif;
+  --body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+/* Groma è notturna per scelta: stessi colori anche con il tema chiaro */
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){color-scheme:dark}}
+:root[data-theme="dark"]{color-scheme:dark}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px);background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.55 var(--body);-webkit-font-smoothing:antialiased}
+a{color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--walls);outline-offset:2px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 18px}
+[hidden]{display:none!important}
+
+/* Testata */
+.hero{padding:26px 0 6px}
+.date{font:600 1.1rem/1 var(--display);letter-spacing:.03em;color:var(--walls);margin:0 0 14px}
+.brand{display:flex;align-items:flex-end;gap:12px}
+.brand svg{width:clamp(64px,16vw,104px);height:auto;flex:none;color:var(--ink);margin-bottom:.35em}
+h1{font:900 clamp(4.6rem,19vw,11rem)/.78 var(--display);letter-spacing:-.01em;margin:0;text-transform:uppercase}
+
+/* Ricerca e filtri */
+.tools{display:grid;gap:10px;margin:24px 0 12px}
+.search{display:flex;align-items:center;gap:10px;background:var(--surface);border:1.5px solid var(--line);border-radius:999px;padding:0 16px}
+.search:focus-within{border-color:var(--walls)}
+.search svg{width:18px;height:18px;flex:none;stroke:var(--muted)}
+.search input{flex:1;min-width:0;border:0;background:transparent;padding:13px 0;font-size:1rem}
+.search input:focus{outline:none}
+.search input::placeholder{color:var(--muted)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 6px;margin:0 -2px;scrollbar-width:none;align-items:center}
+.chips::-webkit-scrollbar{display:none}
+.chips .lab{flex:none;font-size:.74rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-right:2px}
+.chip{--c:var(--ink);flex:none;display:inline-flex;align-items:center;gap:7px;border:1.5px solid var(--c);background:transparent;
+  font-weight:600;font-size:.88rem;line-height:1;padding:9px 12px;border-radius:999px;cursor:pointer;white-space:nowrap}
+.chip svg{width:13px;height:13px;flex:none}
+.chip .n{color:var(--muted);font-weight:500;font-variant-numeric:tabular-nums}
+.chip.cat[aria-pressed="false"]{opacity:.42;border-style:dashed}
+.chip.all[aria-pressed="true"],.chip.fav[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.chip.all[aria-pressed="true"] .n,.chip.fav[aria-pressed="true"] .n{color:var(--bg)}
+.chip.fav{--c:var(--walls)}
+.chip.wh{--c:var(--line);color:var(--muted)}
+.chip.wh[aria-pressed="true"]{--c:var(--ok);background:var(--ok);color:var(--bg)}
+.chip.wh[aria-pressed="true"] .n{color:var(--bg)}
+
+/* Mappa */
+.mapbox{position:relative;height:min(72vh,620px);border:1.5px solid var(--line);border-radius:10px;overflow:hidden;background:var(--land);touch-action:none}
+@media (min-width:760px){.mapbox{height:min(76vh,720px)}.chips{flex-wrap:wrap;overflow:visible}}
+#map{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+#map.dragging{cursor:grabbing}
+.ctl{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:6px}
+.ctl button{width:42px;height:42px;border-radius:50%;border:1.5px solid var(--line);background:var(--surface);font-weight:700;font-size:1.2rem;line-height:1;cursor:pointer;display:grid;place-items:center}
+.ctl svg{width:18px;height:18px}
+.ctl #metroBtn{font:800 1.05rem/1 var(--display)}
+.ctl #metroBtn[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.hint{position:absolute;left:10px;bottom:10px;margin:0;font-size:.78rem;color:var(--muted);background:rgba(22,26,51,.82);padding:6px 11px;border-radius:999px;pointer-events:none}
+.legend{position:absolute;left:10px;top:10px;display:flex;align-items:center;gap:4px;padding:5px 8px;border-radius:999px;background:rgba(22,26,51,.82);pointer-events:none;font-size:.74rem;color:var(--muted)}
+.sheet-open .hint,.nometro .legend{display:none}
+.sheet{position:absolute;left:10px;right:10px;bottom:10px;max-height:62%;max-width:520px;overflow:auto;display:none;background:var(--surface);border:1.5px solid var(--line);border-left:6px solid var(--cc,var(--line));border-radius:10px;padding:14px 16px 16px}
+.sheet-open .sheet{display:block}
+.sheet h3{font:800 clamp(1.6rem,6.5vw,2.3rem)/.95 var(--display);margin:0 44px 8px 0;text-transform:uppercase}
+.where{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:0 0 8px;color:var(--muted);font-size:.86rem}
+.where .k{display:inline-flex;align-items:center;gap:6px;color:var(--cc);font-weight:600}
+.where svg{width:12px;height:12px}
+.info{display:grid;gap:6px;margin:0 0 10px;font-size:.86rem;color:var(--muted)}
+.info .row{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.st-open{color:var(--ok);font-weight:600}
+.st-closed{color:var(--no);font-weight:600}
+.here{margin:0 0 12px;padding:8px 11px;border:1px dashed var(--cc,var(--line));border-radius:8px;font-size:.88rem;display:grid;gap:4px}
+.here .h{font-size:.74rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.here b{font-weight:600}
+.sheet p.d{margin:0 0 12px;max-width:60ch;font-size:.95rem;line-height:1.45}
+@media (max-width:520px){.sheet .btn{padding:9px 12px;font-size:.84rem}}
+.close{position:absolute;right:8px;top:8px;width:36px;height:36px;border-radius:50%;border:0;background:transparent;color:var(--muted);font-size:1.5rem;line-height:1;cursor:pointer}
+.ln{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 4px;border-radius:4px;font:700 .72rem/1 var(--body);color:#fff;background:var(--lc)}
+
+/* Pulsanti */
+.acts{display:flex;flex-wrap:wrap;gap:8px}
+.btn{display:inline-flex;align-items:center;gap:7px;text-decoration:none;font-weight:600;font-size:.88rem;line-height:1;padding:11px 15px;border-radius:999px;border:1.5px solid var(--ink);background:var(--ink);color:var(--bg);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink)}
+.btn.wa{border-color:#25d366;background:transparent;color:var(--ink)}
+.btn[aria-pressed="true"]{background:var(--walls);border-color:var(--walls);color:var(--bg)}
+.btn svg{width:15px;height:15px}
+
+/* Elementi della mappa */
+.road{fill:none;stroke:var(--road);stroke-width:1.3}
+.grid{stroke:var(--line);stroke-width:1;opacity:.45}
+.walls{fill:none;stroke:var(--walls);stroke-width:1.6;stroke-dasharray:6 5;opacity:.75}
+.lbl{font-family:var(--display);font-weight:600;letter-spacing:.04em;fill:var(--muted);paint-order:stroke;stroke:var(--land);stroke-linejoin:round;pointer-events:none}
+.lbl.road-l{fill:#7d86c2;font-weight:600}
+.lbl.river{fill:#6f9fd6;font-weight:800;letter-spacing:.25em}
+.mline{fill:none;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round;opacity:.85}
+.nometro #metroG{display:none}
+.st{pointer-events:none}
+.st circle{stroke-width:2}
+.st text{font:600 10.5px var(--body);fill:#c9cbe6;paint-order:stroke;stroke:var(--land);stroke-width:3px;stroke-linejoin:round;display:none}
+.metro-names .st text{display:block}
+.pin{cursor:pointer;outline:none}
+.pin .shape{stroke:var(--bg);stroke-width:2}
+.pin.sel .shape{stroke:var(--ink);stroke-width:2.5}
+.pin.evpin .shape{stroke:var(--walls);stroke-width:2;stroke-dasharray:3 2}
+.pin .favring{fill:none;stroke:var(--walls);stroke-width:1.6}
+.pin .evdot{fill:var(--walls);stroke:var(--bg);stroke-width:1.5}
+.pin .halo{fill:none;stroke-width:2;opacity:.7}
+.pin text{font:600 12.5px var(--body);fill:var(--ink);paint-order:stroke;stroke:var(--land);stroke-width:3.5px;stroke-linejoin:round;display:none;pointer-events:none}
+.names .pin text,.pin.sel text,.pin:focus-visible text{display:block}
+.pin:focus-visible .shape{stroke:var(--walls);stroke-width:3}
+@media (prefers-reduced-motion:no-preference){.pin .halo{animation:halo 1.8s ease-out infinite;transform-box:fill-box;transform-origin:center}}
+@keyframes halo{from{transform:scale(.7);opacity:.8}to{transform:scale(1.7);opacity:0}}
+
+/* Sezioni */
+section{margin:56px 0}
+h2{font:800 clamp(2.4rem,9vw,3.8rem)/.92 var(--display);text-transform:uppercase;margin:0 0 16px}
+.lead{color:var(--muted);margin:-6px 0 18px;max-width:58ch}
+.cats{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:34px 36px}
+.cat h3{display:flex;align-items:center;gap:10px;font:800 1.9rem/1 var(--display);text-transform:uppercase;color:var(--c);margin:0 0 10px}
+.cat h3 svg{width:16px;height:16px}
+.cat ul{list-style:none;margin:0;padding:0;border-top:1.5px solid var(--line)}
+.cat li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.cat .nm{font-weight:600;min-width:0}
+.cat .nm small{display:block;font-weight:400;font-size:.82rem;color:var(--muted)}
+.cat .nm small .on{color:var(--ok)}
+.cat .by{display:inline-block;margin-left:6px;padding:1px 7px;border:1px solid var(--c);border-radius:999px;color:var(--c);font-size:.72rem;font-weight:600;vertical-align:2px}
+.cat .ev-tag{border-color:var(--walls);color:var(--walls)}
+.cat .ia{display:flex;align-items:center;gap:12px;flex:none;font-size:.86rem}
+.cat .ia a,.cat .ia button{background:none;border:0;padding:4px 0;color:var(--c);font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.cat .ia .star{text-decoration:none;font-size:1.15rem;line-height:1;color:var(--muted)}
+.cat .ia .star[aria-pressed="true"]{color:var(--walls)}
+.cat .extra{margin:12px 0 0;font-size:.88rem}
+.cat .extra a{color:var(--c);font-weight:600}
+.empty{color:var(--muted);margin:0}
+
+/* Agenda */
+.tabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -2px 14px;padding:2px}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:none;border:1.5px solid var(--line);background:transparent;border-radius:999px;padding:9px 14px;font-weight:600;font-size:.9rem;line-height:1;cursor:pointer;white-space:nowrap}
+.tab[aria-selected="true"]{background:var(--walls);border-color:var(--walls);color:var(--bg)}
+.evs{list-style:none;margin:0;padding:0;border-top:1.5px solid var(--line)}
+.ev{display:grid;grid-template-columns:62px minmax(0,1fr);column-gap:14px;padding:12px 0;border-bottom:1px solid var(--line)}
+.ev>:not(.dt){grid-column:2}
+.ev .dt{grid-column:1;grid-row:1 / span 4;border-left:4px solid var(--c);padding-left:9px;font:800 2rem/.9 var(--display)}
+.ev .dt b{display:block;font:600 .66rem/1.3 var(--body);color:var(--c);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.more{margin-top:10px;background:none;border:1.5px solid var(--line);border-radius:999px;padding:9px 14px;font-weight:600;font-size:.88rem;cursor:pointer}
+.ev .dt small{display:block;font:600 .72rem/1.4 var(--body);color:var(--muted);text-transform:uppercase}
+.ev strong{font:800 clamp(1.35rem,5.4vw,1.85rem)/1 var(--display);text-transform:uppercase}
+.ev .meta{color:var(--muted);font-size:.86rem;margin-top:3px}
+.ev .meta .k{color:var(--c);font-weight:600}
+.ev p{margin:3px 0 0;font-size:.92rem;max-width:62ch}
+.ev .ia{display:flex;flex-wrap:wrap;gap:2px 16px;font-size:.86rem;margin-top:4px}
+.ev .ia a,.ev .ia button{background:none;border:0;padding:4px 0;color:var(--c);font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.ongoing{margin-top:26px}
+.ongoing h3{font:800 1.7rem/1 var(--display);text-transform:uppercase;margin:0 0 10px}
+.upd{color:var(--muted);font-size:.84rem;margin:14px 0 0}
+.upd.links{margin-top:6px}
+.upd.links a{color:var(--ink);font-weight:600;text-underline-offset:3px}
+
+/* Meteo */
+.meteo{margin:22px 0 0}
+.meteo-h{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 12px;margin:0 0 10px}
+.meteo-h h2{font:800 1.6rem/1 var(--display);text-transform:uppercase;letter-spacing:.02em;margin:0;color:var(--walls)}
+.meteo-h small{color:var(--muted);font-size:.8rem}
+.meteo-h small a{color:inherit}
+.hours{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 4px;margin:0 -2px}
+.hours::-webkit-scrollbar{display:none}
+.hr{flex:none;min-width:66px;background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:8px 7px 7px;display:grid;justify-items:center;gap:3px;text-align:center}
+.hr.now{border-color:var(--walls)}
+.hr b{font-size:.76rem;font-weight:600;color:var(--muted);white-space:nowrap}
+.hr.now b{color:var(--walls)}
+.hr .ic svg{width:30px;height:30px;display:block}
+.hr .t{font:800 1.45rem/1 var(--display)}
+.hr .p{font-size:.72rem;color:#8fc3ff;font-weight:600;min-height:1em}
+.hr.day{min-width:96px}
+.hr.day .t{font-size:1.15rem}
+.hr .k{font-size:.7rem;color:var(--muted);max-width:86px;line-height:1.2}
+.meteo .empty{font-size:.9rem}
+
+/* Notizie */
+.news{list-style:none;margin:0;padding:0;border-top:1.5px solid var(--line)}
+.nw{display:grid;gap:4px;padding:12px 0;border-bottom:1px solid var(--line)}
+.nw .nk{font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--nk,#c9b8ff)}
+.nw[data-k="roma"]{--nk:var(--walls)}
+.nw[data-k="italia"]{--nk:var(--ok)}
+.nw[data-k="mondo"]{--nk:#8fc3ff}
+.nw .nt{font:700 1.08rem/1.3 var(--body);text-decoration:none;max-width:62ch}
+.nw .nt:hover,.nw .nt:focus-visible{text-decoration:underline;text-underline-offset:3px}
+.nw p{margin:0;color:var(--muted);font-size:.9rem;max-width:70ch}
+.nw .ns{font-size:.76rem;color:var(--muted)}
+.srcs h3{font:800 1.5rem/1 var(--display);text-transform:uppercase;margin:28px 0 10px}
+.srcgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.src{display:grid;gap:4px;align-content:start;padding:12px 14px 13px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);text-decoration:none}
+.src:hover,.src:focus-visible{border-color:var(--walls)}
+.src strong{font:800 1.4rem/1 var(--display);text-transform:uppercase}
+.src .by2{font-size:.78rem;color:var(--muted)}
+.src .when2{font-size:.74rem;font-weight:600;color:var(--walls)}
+.src .d2{font-size:.86rem;line-height:1.4}
+/* Adesso */
+section.now{margin:30px 0 0}
+.now-h{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0 0 12px}
+.now-h h2{margin:0}
+.picks{list-style:none;margin:0;padding:0;display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.pick{--c:var(--line);display:flex;align-items:center;gap:12px;width:100%;height:100%;text-align:left;text-decoration:none;background:var(--surface);border:1.5px solid var(--line);border-left:5px solid var(--c);border-radius:10px;padding:11px 14px;cursor:pointer}
+.pick:hover,.pick:focus-visible{border-color:var(--c)}
+.pick svg{width:16px;height:16px;flex:none}
+.pick strong{display:block;font:800 1.4rem/1 var(--display);text-transform:uppercase}
+.pick small{display:block;color:var(--muted);font-size:.84rem;margin-top:3px}
+footer{border-top:1.5px solid var(--line);padding:26px 0 44px;color:var(--muted);font-size:.86rem}
+footer p{margin:0 0 6px;max-width:64ch}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="hero">
+  <p class="date" id="date">Roma</p>
+  <div class="brand">
+    <svg viewBox="0 0 64 64" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+      <path d="M12 9 L52 19 M18 22 L46 6"/>
+      <path d="M32 14 V58 M28 58 h8" stroke-width="3"/>
+      <path d="M12 9 V27 M52 19 V37 M18 22 V40 M46 6 V24" stroke-width="1.4"/>
+      <circle cx="12" cy="30" r="3.4" fill="var(--c-cinema)" stroke="none"/>
+      <circle cx="52" cy="40" r="3.4" fill="var(--c-musica)" stroke="none"/>
+      <circle cx="18" cy="43" r="3.4" fill="var(--c-fotografia)" stroke="none"/>
+      <circle cx="46" cy="27" r="3.4" fill="var(--c-mercatini)" stroke="none"/>
+      <circle cx="32" cy="14" r="3" fill="currentColor" stroke="none"/>
+    </svg>
+    <h1>Groma</h1>
+  </div>
+</header>
+
+<section class="meteo" id="meteo" aria-labelledby="meteoT" hidden>
+  <div class="meteo-h"><h2 id="meteoT">Meteo · San Paolo</h2><small id="meteoUpd"></small></div>
+  <div class="hours" id="meteoHours"></div>
+</section>
+
+<section class="now" id="adesso" aria-labelledby="nowT">
+  <div class="now-h"><h2 id="nowT">Adesso</h2><button type="button" class="btn" id="pickBtn">Scegli tu</button></div>
+  <ul class="picks" id="picks"></ul>
+  <p class="upd" id="nowNote" hidden>Pioggia in arrivo: ho tolto i mercatini all'aperto.</p>
+</section>
+
+<div class="tools">
+  <label class="search">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>
+    <input id="q" type="search" placeholder="Cerca un posto, un evento o un quartiere" aria-label="Cerca un posto, un evento o un quartiere" autocomplete="off" enterkeyhint="search">
+  </label>
+  <div class="chips" id="chips" role="group" aria-label="Filtra per categoria"></div>
+  <div class="chips" id="whenChips" role="group" aria-label="Filtra per orario"><span class="lab">Quando</span></div>
+</div>
+
+<div class="mapbox" id="mapbox">
+  <svg id="map" role="group" aria-label="Mappa di Roma con i posti, gli eventi e la metro"></svg>
+  <div class="ctl">
+    <button type="button" id="zin" aria-label="Ingrandisci">+</button>
+    <button type="button" id="zout" aria-label="Riduci">−</button>
+    <button type="button" id="zfit" aria-label="Mostra tutti i posti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    <button type="button" id="metroBtn" aria-label="Mostra o nascondi la metro" aria-pressed="true">M</button>
+  </div>
+  <p class="hint" id="hint">Trascina per muoverti, tocca un punto</p>
+  <div class="legend" aria-hidden="true">Metro <span class="ln" style="--lc:#f0663a">A</span><span class="ln" style="--lc:#3b82e6">B</span><span class="ln" style="--lc:#22b06b">C</span></div>
+  <article class="sheet" id="sheet" aria-live="polite"></article>
+</div>
+
+<section id="programma">
+  <h2>In programma</h2>
+  <p class="lead">Concerti, serate, mostre e mercatini dei prossimi giorni. L'agenda si aggiorna da sola ogni mattina.</p>
+  <div class="tabs" id="agTabs" role="tablist" aria-label="Periodo"></div>
+  <div id="agBody"><p class="empty">Carico l'agenda…</p></div>
+  <p class="upd" id="agUpd"></p>
+  <p class="upd links" id="agLinks"></p>
+</section>
+
+
+<section id="posti">
+  <h2>Tutti i posti</h2>
+  <div class="cats" id="cats"></div>
+</section>
+
+<section id="notizie">
+  <h2>Notizie e attualità</h2>
+  <p class="lead">Le notizie principali del mattino, scelte e riassunte ogni giorno, e le voci da ascoltare e da leggere per capire cosa succede.</p>
+  <div class="tabs" id="newsTabs" role="tablist" aria-label="Sezione delle notizie"></div>
+  <div id="newsList"><p class="empty">Carico le notizie…</p></div>
+  <p class="upd" id="newsUpd"></p>
+  <div class="srcs">
+    <h3>Da ascoltare la mattina</h3>
+    <div class="srcgrid" id="listen"></div>
+    <h3>Da leggere</h3>
+    <div class="srcgrid" id="read"></div>
+  </div>
+</section>
+
+
+<footer>
+  <p>La groma era lo strumento con cui i Romani tracciavano strade e città.</p>
+  <p>Gli orari dei posti sono quelli tipici e i programmi cambiano: controlla il sito prima di uscire. Agenda e notizie si aggiornano da sole ogni mattina, il meteo in tempo reale con i dati di <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>.</p>
+  <p id="installTip">Per averla come app: su iPhone aprila in Safari, tocca Condividi e poi «Aggiungi alla schermata Home». Su Android apri il menu di Chrome e scegli «Installa app».</p>
+</footer>
+</div>
+<script>
+"use strict";
+/* ---------- Dati ---------- */
+const CATS = {
+  cinema:{n:"Cinema e teatro"}, mercatini:{n:"Mercatini e vintage"}, fotografia:{n:"Fotografia"},
+  mostre:{n:"Mostre ed eventi"}, musica:{n:"Musica e concerti"}
+};
+const EXTRA = {
+  cinema:{t:"Programmazione dei cinema di Roma",u:"https://www.mymovies.it/cinema/roma/"},
+  fotografia:{t:"Tutta la fotografia in mostra su Panzoo",u:"https://panzoo.it/"},
+  musica:{t:"Serate techno su Resident Advisor",u:"https://ra.co/events/it/rome"}
+};
+const AGENDA = [
+  {t:"Panzoo",s:"panzoo.it",u:"https://panzoo.it/"},
+  {t:"Zero",s:"zero.eu",u:"https://zero.eu/it/"},
+  {t:"RomaToday",s:"romatoday.it",u:"https://www.romatoday.it/eventi/"},
+  {t:"Resident Advisor",s:"ra.co",u:"https://ra.co/events/it/rome"}
+];
+/* o = orari tipici: giorni 1=lun … 7=dom, poi fascia oraria; più fasce separate da ";". Se la chiusura è prima dell'apertura si va oltre mezzanotte.
+   pg = gli orari dipendono dal programma; nt = nota. */
+const PLACES = [
+  {n:"Cinema Troisi",c:"cinema",lat:41.8826,lng:12.4705,q:"Trastevere",d:"Sala restaurata con aula studio e terrazza, rassegne d'autore.",u:"https://www.cinematroisi.it/",o:"1-7 15-23",pg:1},
+  {n:"Nuovo Sacher",c:"cinema",lat:41.8818,lng:12.4718,q:"Trastevere",d:"Il cinema di Nanni Moretti, film in lingua originale e incontri.",u:"https://www.sacherfilm.eu/",o:"1-7 15-23",pg:1},
+  {n:"Greenwich",c:"cinema",lat:41.8787,lng:12.4740,q:"Testaccio",d:"Cinema d'essai, film d'autore anche in lingua originale.",o:"1-7 15-23",pg:1},
+  {n:"Madison",c:"cinema",lat:41.8595,lng:12.4890,q:"Ostiense",d:"Multisala di quartiere tra Garbatella e Ostiense.",o:"1-7 15-23",pg:1},
+  {n:"Quattro Fontane",c:"cinema",lat:41.90165,lng:12.49129,q:"Monti",d:"Sala storica del Circuito Cinema, anteprime e versioni originali.",u:"https://www.circuitocinema.com/cinema/quattro-fontane/",o:"1-7 15-23",pg:1},
+  {n:"Casa del Cinema",c:"cinema",lat:41.9123,lng:12.4847,q:"Villa Borghese",d:"Rassegne gratuite e arena estiva dentro la villa.",o:"1-7 16-23",pg:1},
+  {n:"Teatro Argentina",c:"cinema",lat:41.8956,lng:12.4763,q:"Centro",d:"La sede storica del Teatro di Roma.",u:"https://www.teatrodiroma.net/",o:"2-7 18-23",pg:1},
+  {n:"Teatro India",c:"cinema",lat:41.8688,lng:12.4719,q:"Ostiense",d:"Ex fabbrica sul Tevere, teatro contemporaneo.",u:"https://www.teatrodiroma.net/",o:"2-7 18-23",pg:1},
+  {n:"Teatro Vascello",c:"cinema",lat:41.8838,lng:12.4600,q:"Monteverde",d:"Teatro di ricerca e danza a due passi da Villa Pamphili.",o:"2-7 18-23",pg:1},
+  {n:"Porta Portese",c:"mercatini",lat:41.8805,lng:12.4720,q:"Trastevere",d:"Il mercato della domenica mattina: arriva presto.",o:"7 7-14"},
+  {n:"Mercato Monti",c:"mercatini",lat:41.8945,lng:12.4925,q:"Monti",d:"Vintage e designer emergenti nel weekend.",o:"6-7 10-20",nt:"Quasi tutti i weekend: controlla le date."},
+  {n:"Mercato di Via Sannio",c:"mercatini",lat:41.8841,lng:12.5073,q:"San Giovanni",d:"Usato, pelle e abbigliamento vintage nei giorni feriali.",o:"1-6 9-14"},
+  {n:"Borghetto Flaminio",c:"mercatini",lat:41.9153,lng:12.4744,q:"Flaminio",d:"Mercatino domenicale di antiquariato e vintage.",o:"7 10-19",nt:"Chiuso a luglio e agosto."},
+  {n:"Via del Governo Vecchio",c:"mercatini",lat:41.8985,lng:12.4705,q:"Centro",d:"La strada dei negozi vintage, da girare a piedi.",o:"1-6 10:30-19:30",nt:"Ogni negozio ha i suoi orari."},
+  {n:"Officine Fotografiche",c:"fotografia",lat:41.8648,lng:12.4809,q:"Ostiense",d:"Mostre, corsi e letture portfolio.",o:"1-5 16:30-19:30",nt:"Per mostre ed eventi controlla il sito."},
+  {n:"Museo di Roma in Trastevere",c:"fotografia",lat:41.8900,lng:12.4690,q:"Trastevere",d:"Spesso ospita grandi mostre fotografiche.",o:"2-7 10-20"},
+  {n:"Istituto Centrale per la Grafica",c:"fotografia",lat:41.9011,lng:12.4834,q:"Fontana di Trevi",d:"Fotografia, stampa e grafica d'archivio a Palazzo Poli.",o:"2-7 10-19",nt:"Si entra da via Poli 54."},
+  {n:"Galleria del Cembalo",c:"fotografia",lat:41.9038,lng:12.4767,q:"Centro",d:"Galleria dedicata alla fotografia dentro Palazzo Borghese.",o:"3-5 15:30-19;6 11-19"},
+  {n:"Matèria",c:"fotografia",lat:41.8970,lng:12.5137,q:"San Lorenzo",d:"Galleria di fotografia e arte contemporanea in via dei Latini.",o:"2-6 11-19"},
+  {n:"S.T. Foto Libreria Galleria",c:"fotografia",lat:41.8912,lng:12.5290,q:"Pigneto",d:"Libri fotografici, archivi e piccole mostre, ora in via D'Alviano.",nt:"Orari da concordare: scrivi o chiama prima di andare."},
+  {n:"MAXXI",c:"mostre",lat:41.9285,lng:12.4665,q:"Flaminio",d:"Arte e architettura contemporanea, piazza aperta d'estate.",u:"https://www.maxxi.art/",o:"2-7 11-19"},
+  {n:"Palazzo delle Esposizioni",c:"mostre",lat:41.8995,lng:12.4895,q:"Monti",d:"Grandi mostre e una bella libreria.",u:"https://www.palazzoesposizioni.it/",o:"2-7 10-20"},
+  {n:"Mattatoio",c:"mostre",lat:41.8765,lng:12.4733,q:"Testaccio",d:"Ex macello trasformato in spazio per arti e performance.",o:"2-4 14-20;5-7 11-20"},
+  {n:"Chiostro del Bramante",c:"mostre",lat:41.8998,lng:12.4714,q:"Centro",d:"Mostre immersive e caffè nel chiostro.",o:"1-7 10-20"},
+  {n:"Scuderie del Quirinale",c:"mostre",lat:41.8987,lng:12.4868,q:"Quirinale",d:"Le mostre d'arte più attese dell'anno.",o:"1-4 10-20;5-6 10-22:30;7 10-20",nt:"Aperte solo quando c'è una mostra."},
+  {n:"Galleria Nazionale d'Arte Moderna",c:"mostre",lat:41.9170,lng:12.4821,q:"Valle Giulia",d:"Dall'Ottocento al contemporaneo.",o:"2-7 9-19"},
+  {n:"Auditorium Parco della Musica",c:"musica",lat:41.9295,lng:12.4745,q:"Flaminio",d:"Le tre sale di Renzo Piano: classica, jazz, pop.",o:"1-7 18-23",pg:1},
+  {n:"Monk",c:"musica",lat:41.9055,lng:12.5310,q:"Portonaccio",d:"Live indie, dj set e giardino.",o:"3-7 20-2",pg:1},
+  {n:"Alexanderplatz",c:"musica",lat:41.9070,lng:12.4580,q:"Prati",d:"Storico jazz club romano.",o:"2-7 20:30-1:30"},
+  {n:"Big Mama",c:"musica",lat:41.8850,lng:12.4740,q:"Trastevere",d:"La casa del blues a Roma.",o:"4-6 21-1:30",nt:"Chiuso d'estate."},
+  {n:"Largo Venue",c:"musica",lat:41.8890,lng:12.5310,q:"Pigneto",d:"Concerti indie ed elettronica.",o:"4-6 21-2",pg:1},
+  {n:"Fanfulla 5/a",c:"musica",lat:41.8888,lng:12.5276,q:"Pigneto",d:"Club underground: techno, elettronica e live.",o:"1-7 22-3",nt:"Serve la tessera Arci."},
+  {n:"Forte Antenne",c:"musica",lat:41.9382,lng:12.5008,q:"Villa Ada",d:"Dj set elettronici dentro un forte di fine Ottocento.",o:"5-6 23-5",pg:1},
+  {n:"Spazio Novecento",c:"musica",lat:41.8335,lng:12.4700,q:"EUR",d:"Il club techno grande, line-up internazionali.",o:"5-6 23-4:30"}
+];
+
+/* Metro di Roma: stazioni in ordine di linea (nome, lat, lng) */
+const LCOL = {A:"#f0663a",B:"#3b82e6",C:"#22b06b"};
+const METRO = [
+  {id:"A",st:[["Battistini",41.9066,12.4153],["Cornelia",41.9037,12.4255],["Baldo degli Ubaldi",41.9036,12.4335],["Valle Aurelia",41.9031,12.4436],["Cipro",41.9077,12.4478],["Ottaviano",41.9093,12.4578],["Lepanto",41.9145,12.4641],["Flaminio",41.9114,12.4763],["Spagna",41.9066,12.4831],["Barberini",41.9038,12.4886],["Repubblica",41.9022,12.4960],["Termini",41.9009,12.5013],["Vittorio Emanuele",41.8952,12.5050],["Manzoni",41.8913,12.5094],["San Giovanni",41.8860,12.5107],["Re di Roma",41.8820,12.5149],["Ponte Lungo",41.8783,12.5190],["Furio Camillo",41.8737,12.5232],["Colli Albani",41.8668,12.5297],["Arco di Travertino",41.8626,12.5368],["Porta Furba",41.8589,12.5424],["Numidio Quadrato",41.8560,12.5500],["Lucio Sestio",41.8530,12.5573],["Giulio Agricola",41.8499,12.5645],["Subaugusta",41.8475,12.5710],["Cinecittà",41.8452,12.5775],["Anagnina",41.8424,12.5866]]},
+  {id:"B",st:[["Laurentina",41.8273,12.4829],["EUR Fermi",41.8302,12.4720],["EUR Palasport",41.8326,12.4666],["EUR Magliana",41.8411,12.4652],["Marconi",41.8491,12.4744],["Basilica S. Paolo",41.8556,12.4781],["Garbatella",41.8615,12.4812],["Piramide",41.8754,12.4815],["Circo Massimo",41.8813,12.4887],["Colosseo",41.8913,12.4913],["Cavour",41.8946,12.4932],["Termini",41.9009,12.5013],["Castro Pretorio",41.9061,12.5068],["Policlinico",41.9077,12.5126],["Bologna",41.9134,12.5204],["Tiburtina",41.9104,12.5301],["Quintiliani",41.9152,12.5383],["Monti Tiburtini",41.9196,12.5436],["Pietralata",41.9227,12.5495],["S. Maria del Soccorso",41.9218,12.5572],["Ponte Mammolo",41.9223,12.5646],["Rebibbia",41.9265,12.5733]]},
+  {id:"B1",l:"B",st:[["Bologna",41.9134,12.5204],["S. Agnese/Annibaliano",41.9216,12.5177],["Libia",41.9300,12.5212],["Conca d'Oro",41.9388,12.5254],["Jonio",41.9443,12.5288]]},
+  {id:"C",st:[["Colosseo",41.8913,12.4913],["Porta Metronia",41.8818,12.5003],["San Giovanni",41.8860,12.5107],["Lodi",41.8826,12.5206],["Pigneto",41.8882,12.5268],["Malatesta",41.8878,12.5390],["Teano",41.8859,12.5475],["Gardenie",41.8833,12.5560],["Mirti",41.8810,12.5642],["Parco di Centocelle",41.8780,12.5736],["Alessandrino",41.8706,12.5840],["Torre Spaccata",41.8660,12.5950]]}
+];
+
+/* ---------- Geografia illustrata ---------- */
+const LNG0=12.405, LNG1=12.593, LAT0=41.82, LAT1=41.96;
+const px=(lat,lng)=>[(lng-LNG0)/(LNG1-LNG0)*1000,(LAT1-lat)/(LAT1-LAT0)*1000];
+const TEVERE=[[41.962,12.495],[41.950,12.482],[41.941,12.470],[41.935,12.467],[41.928,12.468],[41.921,12.470],[41.913,12.473],[41.906,12.470],[41.902,12.463],[41.898,12.465],[41.894,12.470],[41.890,12.477],[41.885,12.479],[41.878,12.476],[41.872,12.474],[41.865,12.472],[41.858,12.468],[41.852,12.462],[41.846,12.452],[41.838,12.445],[41.828,12.440],[41.818,12.432]];
+const ANIENE=[[41.943,12.496],[41.944,12.505],[41.938,12.520],[41.930,12.540],[41.925,12.560],[41.928,12.595]];
+const MURA=[[41.911,12.476],[41.909,12.488],[41.909,12.501],[41.905,12.507],[41.892,12.516],[41.884,12.509],[41.879,12.499],[41.873,12.501],[41.876,12.481],[41.882,12.473],[41.885,12.461],[41.895,12.463],[41.898,12.468],[41.911,12.476]];
+const PARCHI=[
+  [[41.918,12.478],[41.920,12.490],[41.913,12.497],[41.908,12.490],[41.911,12.480]],
+  [[41.890,12.443],[41.893,12.455],[41.884,12.460],[41.879,12.447]],
+  [[41.933,12.495],[41.935,12.505],[41.926,12.507],[41.926,12.497]],
+  [[41.873,12.502],[41.871,12.512],[41.850,12.525],[41.848,12.514]]
+];
+const STRADE=[
+  {n:"Flaminia",p:[[41.911,12.476],[41.922,12.4715],[41.935,12.467],[41.948,12.468],[41.962,12.471]]},
+  {n:"Cassia",p:[[41.935,12.467],[41.945,12.458],[41.955,12.447],[41.962,12.440]]},
+  {n:"Salaria",p:[[41.910,12.497],[41.922,12.502],[41.935,12.506],[41.948,12.510],[41.962,12.514]]},
+  {n:"Nomentana",p:[[41.909,12.501],[41.918,12.512],[41.928,12.527],[41.940,12.545],[41.955,12.567]]},
+  {n:"Tiburtina",p:[[41.899,12.509],[41.904,12.525],[41.910,12.545],[41.917,12.567],[41.922,12.593]]},
+  {n:"Prenestina",p:[[41.891,12.516],[41.893,12.535],[41.895,12.555],[41.898,12.575],[41.900,12.593]]},
+  {n:"Casilina",p:[[41.891,12.516],[41.886,12.533],[41.879,12.552],[41.871,12.572],[41.864,12.593]]},
+  {n:"Tuscolana",p:[[41.884,12.509],[41.874,12.524],[41.862,12.540],[41.848,12.558],[41.836,12.574]]},
+  {n:"Appia Nuova",p:[[41.884,12.509],[41.871,12.517],[41.857,12.530],[41.842,12.544],[41.825,12.560]]},
+  {n:"Appia Antica",p:[[41.873,12.501],[41.861,12.509],[41.848,12.517],[41.835,12.524],[41.820,12.530]]},
+  {n:"Ostiense",p:[[41.876,12.481],[41.866,12.479],[41.855,12.477],[41.842,12.470],[41.828,12.460],[41.820,12.452]]},
+  {n:"Portuense",p:[[41.882,12.473],[41.872,12.462],[41.860,12.448],[41.846,12.432],[41.832,12.415]]},
+  {n:"Aurelia",p:[[41.885,12.461],[41.888,12.447],[41.892,12.430],[41.896,12.410]]}
+];
+const QUARTIERI=[["Prati",41.911,12.458],["Trastevere",41.886,12.463],["Testaccio",41.873,12.483],["Monti",41.893,12.499],["San Lorenzo",41.899,12.519],["Pigneto",41.884,12.536],["Ostiense",41.858,12.486],["Flaminio",41.925,12.479],["Monteverde",41.876,12.451],["Centro",41.901,12.474],["EUR",41.826,12.483]];
+
+STRADE.forEach(r=>{const a=r.p[r.p.length-2],b=r.p[r.p.length-1];r.l=a;r.p=r.p.concat([[b[0]+(b[0]-a[0])*6,b[1]+(b[1]-a[1])*6]])});
+[TEVERE].forEach(t=>{const a=t[1],b=t[0];t.unshift([b[0]+(b[0]-a[0])*5,b[1]+(b[1]-a[1])*5]);const c=t[t.length-2],d=t[t.length-1];t.push([d[0]+(d[0]-c[0])*6,d[1]+(d[1]-c[1])*6])});
+{const c=ANIENE[ANIENE.length-2],d=ANIENE[ANIENE.length-1];ANIENE.push([d[0]+(d[0]-c[0])*6,d[1]+(d[1]-c[1])*6])}
+
+/* ---------- Utilità ---------- */
+const SVGNS="http://www.w3.org/2000/svg";
+const $=id=>document.getElementById(id);
+function el(t,a,p){const e=document.createElementNS(SVGNS,t);if(a)for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e}
+function h(t,cls,txt){const e=document.createElement(t);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+const pathOf=(pts,close)=>pts.map((p,i)=>{const[x,y]=px(p[0],p[1]);return(i?"L":"M")+x.toFixed(1)+" "+y.toFixed(1)}).join("")+(close?"Z":"");
+function smooth(pts){const P=pts.map(p=>px(p[0],p[1]));let d="M"+P[0][0].toFixed(1)+" "+P[0][1].toFixed(1);for(let i=1;i<P.length-1;i++){const mx=(P[i][0]+P[i+1][0])/2,my=(P[i][1]+P[i+1][1])/2;d+=`Q${P[i][0].toFixed(1)} ${P[i][1].toFixed(1)} ${mx.toFixed(1)} ${my.toFixed(1)}`}const L=P[P.length-1];return d+`L${L[0].toFixed(1)} ${L[1].toFixed(1)}`}
+function shapePath(c,r){
+  if(c==="cinema")return `M${-r} ${-r*.78}H${r}V${r*.78}H${-r}Z`;
+  if(c==="mercatini")return `M0 ${-r*1.2}L${r*1.12} ${r*.82}H${-r*1.12}Z`;
+  if(c==="mostre")return `M0 ${-r*1.28}L${r*1.28} 0L0 ${r*1.28}L${-r*1.28} 0Z`;
+  if(c==="musica"){let d="";for(let i=0;i<10;i++){const R=i%2?r*.58:r*1.38,a=-Math.PI/2+i*Math.PI/5;d+=(i?"L":"M")+(R*Math.cos(a)).toFixed(2)+" "+(R*Math.sin(a)).toFixed(2)}return d+"Z"}
+  return `M${-r} 0a${r} ${r} 0 1 0 ${2*r} 0a${r} ${r} 0 1 0 ${-2*r} 0Z`;
+}
+const circlePath=r=>`M${-r} 0a${r} ${r} 0 1 0 ${2*r} 0a${r} ${r} 0 1 0 ${-2*r} 0Z`;
+function shapeIcon(c){const s=el("svg",{viewBox:"-10 -10 20 20","aria-hidden":"true"});el("path",{d:shapePath(c,7),fill:`var(--c-${c})`},s);return s}
+const norm=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+const safeUrl=u=>{try{const x=new URL(u);return(x.protocol==="https:"||x.protocol==="http:")?x.href:""}catch(e){return""}};
+const str=(v,n)=>typeof v==="string"?v.trim().slice(0,n):"";
+const mapsSearch=p=>"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(p.n+" Roma");
+const mapsDir=(name,pos)=>"https://www.google.com/maps/dir/?api=1&travelmode=transit&destination="+encodeURIComponent(name?name+", Roma":pos.lat+","+pos.lng);
+const webUrl=p=>p.u||("https://www.google.com/search?q="+encodeURIComponent(p.n+" Roma"));
+const waUrl=t=>"https://wa.me/?text="+encodeURIComponent(t);
+const keyOf=p=>p.id?"f:"+p.id:"s:"+p.n;
+
+/* ---------- Ora di Roma e date ---------- */
+function romeNow(){
+  const d=new Date();
+  try{
+    const parts=new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Rome",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23",weekday:"short"}).formatToParts(d);
+    const g=t=>(parts.find(x=>x.type===t)||{}).value;
+    const dow={Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6,Sun:7}[g("weekday")];
+    const hh=(+g("hour"))%24;
+    if(!dow||!g("year"))throw new Error("tz");
+    return {iso:`${g("year")}-${g("month")}-${g("day")}`,dow,min:hh*60+(+g("minute"))};
+  }catch(e){
+    const p=n=>String(n).padStart(2,"0");
+    return {iso:`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`,dow:d.getDay()||7,min:d.getHours()*60+d.getMinutes()};
+  }
+}
+let NOW=romeNow();
+const ISO_RE=/^\d{4}-\d{2}-\d{2}$/;
+const isoAdd=(iso,n)=>{const t=new Date(iso+"T12:00:00Z");t.setUTCDate(t.getUTCDate()+n);return t.toISOString().slice(0,10)};
+const isoDow=iso=>new Date(iso+"T12:00:00Z").getUTCDay()||7;
+const isoDiff=(a,b)=>Math.round((new Date(b+"T12:00:00Z")-new Date(a+"T12:00:00Z"))/864e5);
+const GG=["","lun","mar","mer","gio","ven","sab","dom"];
+const MM=["gen","feb","mar","apr","mag","giu","lug","ago","set","ott","nov","dic"];
+const isoParts=iso=>iso.split("-").map(Number);
+const fmtShort=iso=>{const[,m,d]=isoParts(iso);return `${d} ${MM[m-1]}`};
+const fmtDay=iso=>`${GG[isoDow(iso)]} ${fmtShort(iso)}`;
+function fmtRange(a,b){if(!b||a===b)return fmtDay(a);const[,ma,da]=isoParts(a),[,mb]=isoParts(b);return ma===mb?`dal ${da} al ${fmtShort(b)}`:`dal ${fmtShort(a)} al ${fmtShort(b)}`}
+
+/* ---------- Orari dei posti ---------- */
+function parseHours(s){
+  if(!s)return[];
+  return s.split(";").map(seg=>{
+    const[dp,hp]=seg.trim().split(/\s+/);const days=[];
+    dp.split(",").forEach(r=>{const[a,b]=r.split("-").map(Number);if(!b){days.push(a);return}let i=a;for(let k=0;k<7;k++){days.push(i);if(i===b)break;i=i%7+1}});
+    const[o,c]=hp.split("-").map(t=>{const[hh,mm]=t.split(":").map(Number);return hh*60+(mm||0)});
+    return{days,o,c};
+  });
+}
+PLACES.forEach(p=>{p.H=parseHours(p.o)});
+const overnight=s=>s.c<=s.o;
+const segsOn=(p,dow)=>(p.H||[]).filter(s=>s.days.includes(dow));
+function openNow(p){
+  for(const s of p.H||[]){
+    if(s.days.includes(NOW.dow)&&NOW.min>=s.o&&(overnight(s)||NOW.min<s.c))return s;
+    const prev=NOW.dow===1?7:NOW.dow-1;
+    if(overnight(s)&&s.days.includes(prev)&&NOW.min<s.c)return s;
+  }
+  return null;
+}
+const openToday=p=>segsOn(p,NOW.dow).length>0||!!openNow(p)||evTonightAt(p).length>0;
+const openWeekend=p=>(p.H||[]).some(s=>s.days.includes(6)||s.days.includes(7)||(s.days.includes(5)&&(s.o>=17*60||overnight(s))));
+const hm=m=>{m=((m%1440)+1440)%1440;const hh=Math.floor(m/60),mi=m%60;return mi?`${hh}:${String(mi).padStart(2,"0")}`:String(hh)};
+function daysLabel(days){
+  const ds=[...new Set(days)].sort((a,b)=>a-b);
+  if(ds.length===7)return"tutti i giorni";
+  if(ds.length>2&&ds.every((d,i)=>!i||d===ds[i-1]+1))return GG[ds[0]]+"–"+GG[ds[ds.length-1]];
+  return ds.map(d=>GG[d]).join(", ");
+}
+const hoursLabel=p=>(p.H||[]).map(s=>`${daysLabel(s.days)} ${hm(s.o)}–${hm(s.c)}`).join(" · ");
+function statusOf(p){
+  if(!(p.H&&p.H.length))return null;
+  const s=openNow(p);
+  if(s)return{open:true,t:`Aperto ora · fino alle ${hm(s.c)}`};
+  const tn=evTonightAt(p).sort((a,b)=>(a.h||"99").localeCompare(b.h||"99"))[0];
+  if(tn)return{open:true,t:`Stasera c'è un evento${tn.h?" alle "+tn.h:""}`};
+  const later=segsOn(p,NOW.dow).filter(x=>x.o>NOW.min).sort((a,b)=>a.o-b.o)[0];
+  if(later)return{open:false,t:`Oggi apre alle ${hm(later.o)}`};
+  for(let k=1;k<=7;k++){const d=(NOW.dow-1+k)%7+1;const sg=segsOn(p,d).sort((a,b)=>a.o-b.o)[0];if(sg)return{open:false,t:`Chiuso ora · apre ${k===1?"domani":GG[d]} alle ${hm(sg.o)}`}}
+  return{open:false,t:"Chiuso"};
+}
+function todayShort(p){
+  if(!(p.H&&p.H.length))return"";
+  const sg=segsOn(p,NOW.dow);
+  if(sg.length)return"oggi "+sg.map(s=>`${hm(s.o)}–${hm(s.c)}`).join(", ");
+  return evTonightAt(p).length?"":"chiuso oggi";
+}
+
+/* ---------- Metro ---------- */
+const STATIONS=(()=>{const m=new Map();METRO.forEach(L=>L.st.forEach(([n,la,ln])=>{if(!m.has(n))m.set(n,{n,lat:la,lng:ln,lines:new Set()});m.get(n).lines.add(L.l||L.id)}));return[...m.values()]})();
+function hav(a,b,c,d){const R=6371e3,r=Math.PI/180;const x=Math.sin((c-a)*r/2)**2+Math.cos(a*r)*Math.cos(c*r)*Math.sin((d-b)*r/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
+const nearCache=new Map();
+function nearest(lat,lng){const k=lat.toFixed(5)+","+lng.toFixed(5);if(nearCache.has(k))return nearCache.get(k);let best=null;for(const s of STATIONS){const d=hav(lat,lng,s.lat,s.lng);if(!best||d<best.d)best={s,d}}nearCache.set(k,best);return best}
+function metroRow(pos){
+  const nb=nearest(pos.lat,pos.lng);if(!nb)return null;
+  const row=h("span","row");row.title="Stazione della metro più vicina";
+  [...nb.s.lines].sort().forEach(l=>{const b=h("span","ln",l);b.style.setProperty("--lc",LCOL[l]);row.append(b)});
+  const mins=Math.max(1,Math.round(nb.d*1.25/80));
+  row.append(h("span",null,`${nb.s.n} · ${nb.d<=1500?`${mins} min a piedi`:`${(nb.d/1000).toFixed(1).replace(".",",")} km`}`));
+  return row;
+}
+
+/* ---------- Stato ---------- */
+const CAT_KEYS=Object.keys(CATS);
+let active=new Set(CAT_KEYS), favOnly=false, query="", selKey=null, when="all";
+let friends=[], names={};
+let EVENTS=[], META=null, agState="loading", agTab="oggi", agAuto=true, agMore=false;
+let favs=new Set();
+try{favs=new Set(JSON.parse(localStorage.getItem("groma:salvati")||"[]"))}catch(e){}
+const saveFavs=()=>{try{localStorage.setItem("groma:salvati",JSON.stringify([...favs]))}catch(e){}};
+const all=()=>PLACES.concat(friends);
+const byKey=k=>all().find(p=>keyOf(p)===k);
+const matches=p=>!query||norm([p.n,p.q,CATS[p.c].n,p.d].join(" ")).includes(query);
+const passWhen=p=>when==="all"||(when==="oggi"?openToday(p):when==="ora"?!!openNow(p):openWeekend(p));
+const visible=()=>all().filter(p=>active.has(p.c)&&(!favOnly||favs.has(keyOf(p)))&&passWhen(p)&&matches(p));
+const byName=p=>p.by?(names[p.by]?"da "+names[p.by]:"dal gruppo"):"dal gruppo";
+
+/* Eventi dell'agenda */
+const evEnd=e=>e.e||e.d;
+const isLong=e=>!!e.e&&isoDiff(e.d,e.e)>=3;
+const evPlace=e=>e.p?PLACES.find(p=>p.n===e.p)||null:null;
+const evPos=e=>{if(e.lat!=null&&e.lng!=null)return{lat:e.lat,lng:e.lng};const p=evPlace(e);return p?{lat:p.lat,lng:p.lng}:null};
+const evMatch=e=>active.has(e.c)&&(!query||norm([e.t,e.v,e.n,e.p,CATS[e.c].n].join(" ")).includes(query));
+const inRange=(e,[a,b])=>e.d<=b&&evEnd(e)>=a;
+const today=e=>inRange(e,[NOW.iso,NOW.iso]);
+const evTonightAt=p=>EVENTS.filter(e=>e.p===p.n&&!isLong(e)&&today(e));
+function cleanEv(id,x){
+  const t=str(x.t,120),d=ISO_RE.test(x.d)?x.d:"";
+  if(!t||!d)return null;
+  const e=ISO_RE.test(x.e)&&x.e>=d&&x.e!==d?x.e:"";
+  const la=+x.lat,lo=+x.lng,okPos=x.lat!=null&&x.lng!=null&&x.lat!==""&&isFinite(la)&&isFinite(lo)&&la>41.6&&la<42.2&&lo>12.2&&lo<12.8;
+  return{id:String(id),t,d,e,h:/^\d{1,2}:\d{2}$/.test(x.h)?x.h:"",c:CATS[x.c]?x.c:"mostre",v:str(x.v,90),p:str(x.p,80),
+    lat:okPos?la:null,lng:okPos?lo:null,u:safeUrl(String(x.u||"")),s:str(x.s,40),n:str(x.n,220)};
+}
+
+/* ---------- Data in testata ---------- */
+function setDate(){try{$("date").textContent="Roma, "+new Date().toLocaleDateString("it-IT",{timeZone:"Europe/Rome",weekday:"long",day:"numeric",month:"long"})}catch(e){}}
+setDate();
+
+/* ---------- Disegno della mappa ---------- */
+const mapbox=$("mapbox"), map=$("map");
+const base=el("g",null,map);
+el("rect",{x:-3000,y:-3000,width:7000,height:7000,fill:"var(--land)"},base);
+for(let i=0;i<=1000;i+=100){
+  el("line",{x1:i,y1:-3000,x2:i,y2:4000,class:"grid","vector-effect":"non-scaling-stroke"},base);
+  el("line",{x1:-3000,y1:i,x2:4000,y2:i,class:"grid","vector-effect":"non-scaling-stroke"},base);
+}
+PARCHI.forEach(p=>el("path",{d:pathOf(p,true),fill:"var(--park)"},base));
+STRADE.forEach(s=>el("path",{d:smooth(s.p),class:"road","vector-effect":"non-scaling-stroke"},base));
+el("path",{d:smooth(ANIENE),fill:"none",stroke:"var(--river)","stroke-width":6,"stroke-linecap":"round"},base);
+el("path",{d:smooth(TEVERE),fill:"none",stroke:"var(--river)","stroke-width":14,"stroke-linecap":"round","stroke-linejoin":"round"},base);
+el("path",{d:pathOf(MURA,true),class:"walls","vector-effect":"non-scaling-stroke"},base);
+const roadLbl=el("g",{class:"lbl road-l","text-anchor":"middle"},map);
+STRADE.forEach(s=>{const q=s.l;const[x,y]=px(q[0],q[1]);const t=el("text",{x,y},roadLbl);t.textContent=s.n});
+const qLbl=el("g",{class:"lbl","text-anchor":"middle"},map);
+QUARTIERI.forEach(([n,la,ln])=>{const[x,y]=px(la,ln);const t=el("text",{x,y},qLbl);t.textContent=n});
+const rivLbl=el("g",{class:"lbl river"},map);
+{const[x,y]=px(41.851,12.462);const t=el("text",{x,y,transform:`rotate(-50 ${x} ${y})`},rivLbl);t.textContent="Tevere"}
+/* metro sopra le etichette di fondo, sotto i segnaposto */
+const metroG=el("g",{id:"metroG"},map);
+METRO.forEach(L=>el("path",{d:pathOf(L.st.map(s=>[s[1],s[2]])),class:"mline",stroke:LCOL[L.l||L.id],"vector-effect":"non-scaling-stroke"},metroG));
+const stEls=[];
+STATIONS.forEach(s=>{
+  const[x,y]=px(s.lat,s.lng),multi=s.lines.size>1;
+  const g=el("g",{class:"st"},metroG);
+  el("circle",{r:multi?4.6:3.3,fill:multi?"#fff":"var(--bg)",stroke:multi?"var(--bg)":LCOL[[...s.lines][0]]},g);
+  const t=el("text",{x:7,y:3.6},g);t.textContent=s.n;
+  stEls.push({el:g,x,y});
+});
+const pinsG=el("g",null,map);
+let pinEls=[];
+
+/* ---------- Vista: zoom e spostamento ---------- */
+let W=1,H=1,u0=1,view={cx:500,cy:500,z:1},namesOn=false,stNamesOn=false,anim=0;
+const ZMAX=7, reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+function measure(){const r=mapbox.getBoundingClientRect();W=Math.max(1,r.width);H=Math.max(1,r.height);u0=Math.max(1000/W,1000/H)}
+function clampView(v){v.z=Math.min(ZMAX,Math.max(1,v.z));v.cx=Math.min(1000,Math.max(0,v.cx));v.cy=Math.min(1000,Math.max(0,v.cy));return v}
+function apply(){
+  const u=u0/view.z,w=W*u,hh=H*u,sc=u.toFixed(4);
+  map.setAttribute("viewBox",`${(view.cx-w/2).toFixed(2)} ${(view.cy-hh/2).toFixed(2)} ${w.toFixed(2)} ${hh.toFixed(2)}`);
+  for(const p of pinEls)p.el.setAttribute("transform",`translate(${p.x.toFixed(2)} ${p.y.toFixed(2)}) scale(${sc})`);
+  for(const s of stEls)s.el.setAttribute("transform",`translate(${s.x.toFixed(2)} ${s.y.toFixed(2)}) scale(${sc})`);
+  qLbl.setAttribute("font-size",(12*u).toFixed(3));qLbl.setAttribute("stroke-width",(3*u).toFixed(3));
+  roadLbl.setAttribute("font-size",(10.5*u).toFixed(3));roadLbl.setAttribute("stroke-width",(3*u).toFixed(3));
+  rivLbl.setAttribute("font-size",(12*u).toFixed(3));rivLbl.setAttribute("stroke-width",(3*u).toFixed(3));
+  const on=(1/u)>=0.95; if(on!==namesOn){namesOn=on;mapbox.classList.toggle("names",on)}
+  const so=(1/u)>=1.45; if(so!==stNamesOn){stNamesOn=so;mapbox.classList.toggle("metro-names",so)}
+}
+function goTo(t){
+  clampView(t);cancelAnimationFrame(anim);
+  if(reduce){view=t;apply();return}
+  const f={...view},t0=performance.now(),D=380;
+  const step=now=>{const k=Math.min(1,(now-t0)/D),e=1-Math.pow(1-k,3);
+    view={cx:f.cx+(t.cx-f.cx)*e,cy:f.cy+(t.cy-f.cy)*e,z:f.z*Math.pow(t.z/f.z,e)};apply();if(k<1)anim=requestAnimationFrame(step)};
+  anim=requestAnimationFrame(step);
+}
+function zoomAt(f,ux,uy){const z2=Math.min(ZMAX,Math.max(1,view.z*f)),k=view.z/z2;view.cx=ux-(ux-view.cx)*k;view.cy=uy-(uy-view.cy)*k;view.z=z2;clampView(view);apply()}
+function toUnits(cx,cy){const r=map.getBoundingClientRect(),u=u0/view.z;return[view.cx-W*u/2+(cx-r.left)*u,view.cy-H*u/2+(cy-r.top)*u]}
+function fitTo(list,animate=true){
+  if(!list.length)list=all();
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  list.forEach(p=>{const[x,y]=px(p.lat,p.lng);x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)});
+  const pad=90,bw=Math.max(x1-x0,120)+pad*2,bh=Math.max(y1-y0,120)+pad*2;
+  const z=Math.min(W*u0/bw,H*u0/bh,4);
+  const t={cx:(x0+x1)/2,cy:(y0+y1)/2,z};
+  animate?goTo(t):(view=clampView(t),apply());
+}
+$("zin").onclick=()=>goTo({...view,z:view.z*1.6});
+$("zout").onclick=()=>goTo({...view,z:view.z/1.6});
+$("zfit").onclick=()=>fitTo(visible());
+let metroOn=true;try{metroOn=localStorage.getItem("groma:metro")!=="0"}catch(e){}
+function setMetro(v){metroOn=v;mapbox.classList.toggle("nometro",!v);$("metroBtn").setAttribute("aria-pressed",String(v));try{localStorage.setItem("groma:metro",v?"1":"0")}catch(e){}}
+$("metroBtn").onclick=()=>setMetro(!metroOn);
+setMetro(metroOn);
+
+const ptrs=new Map();let drag=null,moved=false,pinch=null,downPin=null;
+map.addEventListener("pointerdown",e=>{
+  ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});cancelAnimationFrame(anim);
+  try{map.setPointerCapture(e.pointerId)}catch(_){}
+  if(ptrs.size===1){moved=false;downPin=e.target.closest?e.target.closest(".pin"):null;drag={x:e.clientX,y:e.clientY,cx:view.cx,cy:view.cy}}
+  else if(ptrs.size===2){moved=true;const[a,b]=[...ptrs.values()];pinch={d:Math.max(1,Math.hypot(a.x-b.x,a.y-b.y)),z:view.z}}
+});
+map.addEventListener("pointermove",e=>{
+  if(!ptrs.has(e.pointerId))return;ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(ptrs.size>=2&&pinch){const[a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);const[ux,uy]=toUnits((a.x+b.x)/2,(a.y+b.y)/2);zoomAt(pinch.z*d/pinch.d/view.z,ux,uy);return}
+  if(!drag)return;
+  const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
+  if(!moved&&Math.hypot(dx,dy)>6){moved=true;map.classList.add("dragging")}
+  if(moved){const u=u0/view.z;view.cx=drag.cx-dx*u;view.cy=drag.cy-dy*u;clampView(view);apply()}
+});
+function release(e){
+  ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;
+  if(ptrs.size===1){const p=[...ptrs.values()][0];drag={x:p.x,y:p.y,cx:view.cx,cy:view.cy}}
+  if(!ptrs.size){drag=null;map.classList.remove("dragging")}
+}
+map.addEventListener("pointerup",e=>{
+  const tap=!moved&&ptrs.size===1;release(e);if(!tap)return;
+  if(downPin)select(downPin.dataset.key,false);else closeSheet();
+});
+map.addEventListener("pointercancel",release);
+map.addEventListener("wheel",e=>{e.preventDefault();const[ux,uy]=toUnits(e.clientX,e.clientY);zoomAt(Math.exp(-e.deltaY*.0016),ux,uy)},{passive:false});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
+
+/* ---------- Segnaposto ---------- */
+function addPin(k,pos,cat,label,opts){
+  const[x,y]=px(pos.lat,pos.lng),sel=k===selKey;
+  const g=el("g",{class:"pin"+(opts.ev?" evpin":"")+(sel?" sel":""),tabindex:"0",role:"button","aria-label":label},pinsG);
+  g.dataset.key=k;
+  el("circle",{r:20,fill:"transparent"},g);
+  if(sel)el("path",{class:"halo",d:shapePath(cat,10),stroke:`var(--c-${cat})`},g);
+  if(opts.fav)el("circle",{class:"favring",r:sel?17:13},g);
+  el("path",{class:"shape",d:opts.ev?circlePath(sel?8.5:6):shapePath(cat,sel?9.5:7),fill:`var(--c-${cat})`},g);
+  if(opts.friend)el("circle",{r:2.3,fill:"var(--bg)"},g);
+  if(opts.tonight)el("circle",{class:"evdot",cx:sel?9:7,cy:sel?-9:-7,r:3.6},g);
+  const left=x>620,t=el("text",{x:(left?-1:1)*(sel?16:13),y:4.5,"text-anchor":left?"end":"start"},g);t.textContent=opts.name;
+  g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();select(k,true)}});
+  pinEls.push({el:g,x,y});
+}
+function renderPins(){
+  pinsG.replaceChildren();pinEls=[];
+  const vis=visible().sort((a,b)=>(keyOf(a)===selKey)-(keyOf(b)===selKey));
+  for(const p of vis){const k=keyOf(p);addPin(k,p,p.c,p.n+", "+CATS[p.c].n,{name:p.n,fav:favs.has(k),friend:!!p.id,tonight:evTonightAt(p).length>0})}
+  if(!favOnly){
+    const evs=EVENTS.filter(e=>!evPlace(e)&&e.lat!=null&&evMatch(e)&&(("e:"+e.id)===selKey||(!isLong(e)&&today(e)&&evEnd(e)>=NOW.iso)));
+    evs.sort((a,b)=>(("e:"+a.id)===selKey)-(("e:"+b.id)===selKey));
+    for(const e of evs)addPin("e:"+e.id,e,e.c,e.t+", evento",{ev:true,name:e.t});
+  }
+  apply();
+}
+
+/* ---------- Scheda ---------- */
+const sheet=$("sheet");
+function select(k,fly){
+  const isEv=k.startsWith("e:");
+  const obj=isEv?EVENTS.find(e=>"e:"+e.id===k):byKey(k);
+  if(!obj)return;
+  const pos=isEv?evPos(obj):{lat:obj.lat,lng:obj.lng};
+  selKey=k;renderPins();
+  isEv?openEvSheet(obj):openSheet(obj);
+  if(!pos)return;
+  const[x,y]=px(pos.lat,pos.lng),u=u0/view.z;
+  const off=(sheet.offsetHeight/2+6)*(fly?u0/Math.max(view.z,3.2):u);
+  const sy=(y-(view.cy-H*u/2))/u, sx=(x-(view.cx-W*u/2))/u;
+  if(fly)goTo({cx:x,cy:y+off,z:Math.max(view.z,3.2)});
+  else if(sy>H-sheet.offsetHeight-30||sy<40||sx<30||sx>W-60)goTo({cx:x,cy:y+off,z:view.z});
+}
+function sheetHead(title,cat,whereBits){
+  sheet.style.setProperty("--cc",`var(--c-${cat})`);sheet.replaceChildren();
+  const x=h("button","close","×");x.type="button";x.setAttribute("aria-label","Chiudi");x.onclick=closeSheet;
+  const where=h("p","where");const kk=h("span","k");kk.append(shapeIcon(cat),CATS[cat].n);where.append(kk);
+  whereBits.filter(Boolean).forEach(b=>where.append(h("span",null,b)));
+  sheet.append(x,h("h3",null,title),where);
+}
+function evLine(e){
+  const f=e.d<NOW.iso?NOW.iso:e.d;
+  if(isLong(e))return`fino al ${fmtShort(evEnd(e))}`;
+  const day=f===NOW.iso?"Oggi":f===isoAdd(NOW.iso,1)?"Domani":fmtDay(f);
+  return day+(e.h?" alle "+e.h:"");
+}
+function openSheet(p){
+  const k=keyOf(p);
+  sheetHead(p.n,p.c,[p.q,p.id?"proposto "+byName(p):""]);
+  const info=h("div","info");
+  const st=statusOf(p);
+  if(st){const r=h("span","row");r.append(h("span",st.open?"st-open":"st-closed",st.t));if(p.pg)r.append(h("span",null,"· secondo programma"));info.append(r)}
+  if(p.H&&p.H.length)info.append(h("span","row",hoursLabel(p)));
+  if(p.nt)info.append(h("span","row",p.nt));
+  const mr=metroRow(p);if(mr)info.append(mr);
+  sheet.append(info);
+  const evs=EVENTS.filter(e=>e.p===p.n&&evEnd(e)>=NOW.iso).sort((a,b)=>(isLong(a)-isLong(b))||(a.d<b.d?-1:1)).slice(0,4);
+  if(evs.length){
+    const box=h("div","here");box.append(h("span","h","In programma qui"));
+    evs.forEach(e=>{const r=h("span");const lk=e.u?h("a",null,e.t):h("b",null,e.t);if(e.u){lk.href=e.u;lk.target="_blank";lk.rel="noopener";lk.style.fontWeight="600"}r.append(lk," · "+evLine(e));box.append(r)});
+    sheet.append(box);
+  }
+  if(p.d)sheet.append(h("p","d",p.d));
+  const acts=h("div","acts");
+  const a1=h("a","btn",p.u?"Apri il sito":"Cerca online");a1.href=webUrl(p);a1.target="_blank";a1.rel="noopener";
+  const a2=h("a","btn ghost","Come arrivare");a2.href=mapsDir(p.n,p);a2.target="_blank";a2.rel="noopener";
+  const a3=h("a","btn wa","Andiamo?");a3.href=waUrl(`Stasera ${p.n}?\n${p.u||mapsSearch(p)}`);a3.target="_blank";a3.rel="noopener";
+  const s=h("button","btn ghost",favs.has(k)?"★ Salvato":"☆ Salva");s.type="button";s.setAttribute("aria-pressed",favs.has(k));
+  s.onclick=()=>{toggleFav(k);s.textContent=favs.has(k)?"★ Salvato":"☆ Salva";s.setAttribute("aria-pressed",favs.has(k))};
+  acts.append(a1,a2,a3,s);sheet.append(acts);
+  mapbox.classList.add("sheet-open");
+}
+function evWa(e){return`${e.t} · ${evLine(e)}${e.v?" · "+e.v:""}. Andiamo?${e.u?"\n"+e.u:""}`}
+function openEvSheet(e){
+  const pl=evPlace(e),pos=evPos(e);
+  sheetHead(e.t,e.c,[e.v||(pl&&pl.n),pl&&pl.q]);
+  const info=h("div","info");
+  const r=h("span","row");r.append(h("span","st-open",isLong(e)?`In corso ${fmtRange(e.d,e.e)}`:(e.e?fmtRange(e.d,e.e)+(e.h?" · "+e.h:""):evLine(e))));info.append(r);
+  if(pos){const mr=metroRow(pos);if(mr)info.append(mr)}
+  if(e.s)info.append(h("span","row","Fonte: "+e.s));
+  sheet.append(info);
+  if(e.n)sheet.append(h("p","d",e.n));
+  const acts=h("div","acts");
+  const a1=h("a","btn",e.u?"Info e biglietti":"Cerca online");a1.href=e.u||("https://www.google.com/search?q="+encodeURIComponent(e.t+" "+(e.v||"")+" Roma"));a1.target="_blank";a1.rel="noopener";acts.append(a1);
+  if(pos||e.v){const a2=h("a","btn ghost","Come arrivare");a2.href=mapsDir(e.v||(pl&&pl.n)||"",pos||{lat:0,lng:0});a2.target="_blank";a2.rel="noopener";acts.append(a2)}
+  const a3=h("a","btn wa","Andiamo?");a3.href=waUrl(evWa(e));a3.target="_blank";a3.rel="noopener";acts.append(a3);
+  sheet.append(acts);
+  mapbox.classList.add("sheet-open");
+}
+function closeSheet(){if(!selKey&&!mapbox.classList.contains("sheet-open"))return;selKey=null;mapbox.classList.remove("sheet-open");renderPins()}
+function toggleFav(k){favs.has(k)?favs.delete(k):favs.add(k);saveFavs();refresh(false)}
+function showOnMap(k){mapbox.scrollIntoView({behavior:reduce?"auto":"smooth",block:"center"});select(k,true)}
+
+/* ---------- Filtri e ricerca ---------- */
+const chipsBox=$("chips"), chipEls={};
+function mkChip(box,cls,label,icon){const b=h("button","chip "+cls);b.type="button";if(icon)b.append(icon);b.append(label);const n=h("span","n");b.append(n);box.append(b);return b}
+chipEls.all=mkChip(chipsBox,"all","Tutte");
+chipEls.all.onclick=()=>{active=new Set(CAT_KEYS);refresh(true)};
+CAT_KEYS.forEach(k=>{const b=mkChip(chipsBox,"cat",CATS[k].n,shapeIcon(k));b.style.setProperty("--c",`var(--c-${k})`);chipEls[k]=b;
+  b.onclick=()=>{
+    if(active.size===CAT_KEYS.length)active=new Set([k]);
+    else{active.has(k)?active.delete(k):active.add(k);if(!active.size)active=new Set(CAT_KEYS)}
+    refresh(true);
+  }});
+chipEls.fav=mkChip(chipsBox,"fav","★ Salvati");
+chipEls.fav.onclick=()=>{favOnly=!favOnly;refresh(true)};
+const WHEN=[["all","Sempre"],["oggi","Aperto oggi"],["ora","Aperto ora"],["weekend","Weekend"]];
+const whenEls={};
+WHEN.forEach(([k,l])=>{const b=mkChip($("whenChips"),"wh",l);whenEls[k]=b;b.onclick=()=>{when=k;refresh(true);const v=visible();if(v.length&&k!=="all")fitTo(v)}});
+function updateChips(){
+  const base=all().filter(p=>(!favOnly||favs.has(keyOf(p)))&&matches(p));
+  const baseW=base.filter(passWhen);
+  chipEls.all.setAttribute("aria-pressed",active.size===CAT_KEYS.length);
+  chipEls.all.querySelector(".n").textContent=baseW.length;
+  CAT_KEYS.forEach(k=>{chipEls[k].setAttribute("aria-pressed",active.has(k));chipEls[k].querySelector(".n").textContent=baseW.filter(p=>p.c===k).length});
+  chipEls.fav.setAttribute("aria-pressed",favOnly);
+  chipEls.fav.querySelector(".n").textContent=all().filter(p=>favs.has(keyOf(p))).length;
+  const baseC=base.filter(p=>active.has(p.c));
+  const prev=when;
+  WHEN.forEach(([k])=>{when=k;whenEls[k].setAttribute("aria-pressed",k===prev);whenEls[k].querySelector(".n").textContent=baseC.filter(passWhen).length});
+  when=prev;
+}
+let qTimer=0;
+$("q").addEventListener("input",e=>{
+  query=norm(e.target.value.trim());refresh(false);
+  clearTimeout(qTimer);qTimer=setTimeout(()=>{const v=visible();if(query&&v.length)fitTo(v)},400);
+});
+function refresh(){
+  if(selKey){
+    const isEv=selKey.startsWith("e:");
+    const still=isEv?EVENTS.some(e=>"e:"+e.id===selKey&&evMatch(e)):visible().some(p=>keyOf(p)===selKey);
+    if(!still){selKey=null;mapbox.classList.remove("sheet-open")}
+  }
+  renderPins();renderLists();updateChips();renderAgenda();renderNow();
+  $("hint").textContent=visible().length?"Trascina per muoverti, tocca un punto":"Nessun posto con questi filtri";
+}
+
+/* ---------- Agenda dinamica ---------- */
+const TABS=[["oggi","Oggi"],["domani","Domani"],["weekend","Weekend"],["sette","Prossimi 7 giorni"]];
+const tabEls={};
+TABS.forEach(([k,l])=>{const b=h("button","tab",l);b.type="button";b.setAttribute("role","tab");b.onclick=()=>{agTab=k;agAuto=false;renderAgenda()};tabEls[k]=b;$("agTabs").append(b)});
+function tabRange(t){
+  const T=NOW.iso,d=NOW.dow;
+  if(t==="oggi")return[T,T];
+  if(t==="domani"){const x=isoAdd(T,1);return[x,x]}
+  if(t==="weekend")return d<=5?[isoAdd(T,5-d),isoAdd(T,7-d)]:[T,isoAdd(T,7-d)];
+  return[T,isoAdd(T,6)];
+}
+function evRow(e,R,long){
+  const li=h("li","ev");li.style.setProperty("--c",`var(--c-${e.c})`);
+  const dt=h("div","dt");
+  if(long){const[,m,dd]=isoParts(evEnd(e));dt.append(h("b",null,"fino al"),String(dd),h("small",null,MM[m-1]))}
+  else{const f=e.d<R[0]?R[0]:e.d;const[,m,dd]=isoParts(f);dt.append(h("b",null,f===NOW.iso?"oggi":GG[isoDow(f)]),String(dd),h("small",null,MM[m-1]))}
+  li.append(dt,h("strong",null,e.t));
+  const meta=h("div","meta");meta.append(h("span","k",CATS[e.c].n));
+  const bits=[e.v||(evPlace(e)&&evPlace(e).n)||"",long?(e.d>NOW.iso?"apre "+fmtShort(e.d):""):(e.e?fmtRange(e.d,e.e):""),e.h?"ore "+e.h:""].filter(Boolean);
+  if(bits.length)meta.append(" · "+bits.join(" · "));
+  li.append(meta);
+  if(e.n)li.append(h("p",null,e.n));
+  const ia=h("div","ia");
+  const a=h("a",null,e.u?"Info":"Cerca");a.href=e.u||("https://www.google.com/search?q="+encodeURIComponent(e.t+" Roma"));a.target="_blank";a.rel="noopener";ia.append(a);
+  const pl=evPlace(e);
+  if(pl||e.lat!=null){const m=h("button",null,"Mappa");m.type="button";m.onclick=()=>showOnMap(pl?keyOf(pl):"e:"+e.id);ia.append(m)}
+  const w=h("a",null,"Andiamo?");w.href=waUrl(evWa(e));w.target="_blank";w.rel="noopener";ia.append(w);
+  li.append(ia);
+  return li;
+}
+function renderAgenda(){
+  const box=$("agBody"),upd=$("agUpd");
+  box.replaceChildren();
+  $("agTabs").hidden=agState!=="ready";
+  if(agState!=="ready"){
+    box.append(h("p","empty",agState==="loading"?"Carico l'agenda…":"L'agenda non si carica: controlla la connessione. Intanto trovi gli eventi nelle agende qui sotto."));
+    upd.textContent="";return;
+  }
+  const live=EVENTS.filter(e=>evEnd(e)>=NOW.iso&&evMatch(e));
+  if(agAuto){agAuto=false;if(!live.some(e=>!isLong(e)&&today(e)))agTab="sette"}
+  TABS.forEach(([k])=>tabEls[k].setAttribute("aria-selected",String(k===agTab)));
+  const R=tabRange(agTab);
+  const inT=live.filter(e=>inRange(e,R));
+  const shorts=inT.filter(e=>!isLong(e)).sort((a,b)=>{const fa=a.d<R[0]?R[0]:a.d,fb=b.d<R[0]?R[0]:b.d;return fa<fb?-1:fa>fb?1:(a.h||"99").localeCompare(b.h||"99")});
+  const longs=inT.filter(isLong).sort((a,b)=>evEnd(a)<evEnd(b)?-1:evEnd(a)>evEnd(b)?1:0);
+  if(!EVENTS.length)box.append(h("p","empty","L'agenda è ancora vuota: si riempie al prossimo aggiornamento."));
+  else if(!shorts.length)box.append(h("p","empty",agTab==="oggi"?"Oggi non c'è niente in agenda con questi filtri: guarda i prossimi giorni.":"Nessun evento in questo periodo con i filtri scelti."));
+  else{const ul=h("ul","evs");shorts.forEach(e=>ul.append(evRow(e,R,false)));box.append(ul)}
+  if(longs.length){
+    const wrap=h("div","ongoing");wrap.append(h("h3",null,"Mostre e festival in corso"));
+    const ul=h("ul","evs"),LIM=4;
+    longs.forEach((e,i)=>{const li=evRow(e,R,true);if(!agMore&&i>=LIM)li.hidden=true;ul.append(li)});
+    wrap.append(ul);
+    if(!agMore&&longs.length>LIM){const b=h("button","more",`Mostra tutte (${longs.length})`);b.type="button";b.onclick=()=>{agMore=true;renderAgenda()};wrap.append(b)}
+    box.append(wrap);
+  }
+  const up=META&&typeof META.updated==="string"&&ISO_RE.test(META.updated.slice(0,10))?META.updated.slice(0,10):"";
+  upd.textContent=up?`Agenda aggiornata ${fmtDay(up)} · si aggiorna da sola ${str(META.freq,40)||"ogni settimana"}.`:"";
+}
+
+/* ---------- Agende esterne (riga compatta) ---------- */
+{const p=$("agLinks");p.append("Altre agende: ");AGENDA.forEach((x,i)=>{if(i)p.append(" · ");const a=h("a",null,x.t);a.href=x.u;a.target="_blank";a.rel="noopener";p.append(a)})}
+
+/* ---------- Meteo ---------- */
+let METEO=null;
+const WX_SVG={
+  sun:'<circle cx="16" cy="16" r="6" fill="#ffcf5a"/><g stroke="#ffcf5a" stroke-width="2.2" stroke-linecap="round"><path d="M16 3v3M16 26v3M3 16h3M26 16h3M6.8 6.8l2.1 2.1M23.1 23.1l2.1 2.1M6.8 25.2l2.1-2.1M23.1 8.9l2.1-2.1"/></g>',
+  moon:'<path d="M20.5 5.5a10.5 10.5 0 1 0 6 18.6A9 9 0 0 1 20.5 5.5z" fill="#e8d9a8"/>',
+  sunS:'<circle cx="11" cy="11" r="5" fill="#ffcf5a"/><g stroke="#ffcf5a" stroke-width="1.8" stroke-linecap="round"><path d="M11 2.5v2M2.5 11h2M5 5l1.4 1.4M17 5l-1.4 1.4"/></g>',
+  moonS:'<path d="M14 4a7.5 7.5 0 1 0 4.5 13.4A6.4 6.4 0 0 1 14 4z" fill="#e8d9a8"/>',
+  cloud:'<path d="M9.5 25h13.5a5 5 0 0 0 .4-10 7 7 0 0 0-13.3-1.4A5.7 5.7 0 0 0 9.5 25z" fill="#aab3dc"/>',
+  rain:'<g stroke="#6fb4ff" stroke-width="2" stroke-linecap="round"><path d="M11 26l-1.5 3M16 26l-1.5 3M21 26l-1.5 3"/></g>',
+  bolt:'<path d="M17 21l-4 6h3l-1.5 4 5-6.5h-3l2-3.5z" fill="#ffcf5a"/>',
+  snow:'<g fill="#fff"><circle cx="11" cy="28" r="1.4"/><circle cx="16" cy="29.5" r="1.4"/><circle cx="21" cy="28" r="1.4"/></g>',
+  fog:'<g stroke="#aab3dc" stroke-width="2.2" stroke-linecap="round"><path d="M6 11h20M4 16h24M7 21h18M10 26h12"/></g>'
+};
+function wxKind(s){
+  s=norm(s);
+  if(/tempor/.test(s))return"storm";
+  if(/neve|nevisch/.test(s))return"snow";
+  if(/pioggia|rovesc|pioviggin|acquazz|piovasc/.test(s))return"rain";
+  if(/nebbi|foschia/.test(s))return"fog";
+  if(/poco nuvol|parz|nubi sparse|velat|schiarit|variabil|sereno o/.test(s))return"partly";
+  if(/nuvol|copert/.test(s))return"cloud";
+  if(/sereno|sole|soleggiato/.test(s))return"clear";
+  return"partly";
+}
+function wxIcon(kind,night){
+  const S=WX_SVG,raise=s=>`<g transform="translate(0 -3)">${s}</g>`;
+  const inner=kind==="clear"?(night?S.moon:S.sun)
+    :kind==="partly"?(night?S.moonS:S.sunS)+S.cloud
+    :kind==="cloud"?S.cloud
+    :kind==="fog"?S.fog
+    :kind==="rain"?raise(S.cloud)+S.rain
+    :kind==="snow"?raise(S.cloud)+S.snow
+    :raise(S.cloud)+S.bolt;
+  const sp=h("span","ic");sp.setAttribute("aria-hidden","true");
+  sp.innerHTML=`<svg viewBox="0 0 32 32">${inner}</svg>`;
+  return sp;
+}
+const num=(v,lo,hi)=>{const n=+v;return v!==null&&v!==""&&isFinite(n)&&n>=lo&&n<=hi?n:null};
+function cleanMeteo(x){
+  if(!x||typeof x!=="object")return null;
+  const hours=(Array.isArray(x.hours)?x.hours:[]).slice(0,72).map(o=>o&&typeof o==="object"?{
+    t:typeof o.t==="string"&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(o.t)?o.t:"",k:str(o.k,40),temp:num(o.temp,-30,50),p:num(o.p,0,100),w:num(o.w,0,250)}:null)
+    .filter(o=>o&&o.t&&o.temp!=null).sort((a,b)=>a.t<b.t?-1:1);
+  const days=(Array.isArray(x.days)?x.days:[]).slice(0,7).map(o=>o&&typeof o==="object"?{
+    d:ISO_RE.test(o.d)?o.d:"",k:str(o.k,40),min:num(o.min,-30,50),max:num(o.max,-30,50),p:num(o.p,0,100)}:null)
+    .filter(o=>o&&o.d).sort((a,b)=>a.d<b.d?-1:1);
+  return{hours,days,updated:typeof x.updated==="string"?x.updated:"",src:str(x.src,40),srcUrl:safeUrl(String(x.srcUrl||""))};
+}
+/* Previsioni dal vivo: Open-Meteo, Basilica di San Paolo */
+const WX_URL="https://api.open-meteo.com/v1/forecast?latitude=41.8587&longitude=12.4769&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Europe%2FRome&forecast_days=4";
+const WMO={0:"Sereno",1:"Poco nuvoloso",2:"Parzialmente nuvoloso",3:"Coperto",45:"Nebbia",48:"Nebbia",51:"Pioviggine",53:"Pioviggine",55:"Pioviggine",56:"Pioviggine gelata",57:"Pioviggine gelata",61:"Pioggia debole",63:"Pioggia",65:"Pioggia forte",66:"Pioggia gelata",67:"Pioggia gelata",71:"Neve debole",73:"Neve",75:"Neve forte",77:"Neve",80:"Rovesci",81:"Rovesci",82:"Rovesci forti",85:"Rovesci di neve",86:"Rovesci di neve",95:"Temporale",96:"Temporale con grandine",99:"Temporale con grandine"};
+const stamp=()=>{const n=romeNow();return`${n.iso}T${String(Math.floor(n.min/60)).padStart(2,"0")}:${String(n.min%60).padStart(2,"0")}`};
+function fromOpenMeteo(j,at){
+  const H=j&&j.hourly,D=j&&j.daily,col=(o,k,i)=>o&&Array.isArray(o[k])?o[k][i]:null;
+  if(!H||!Array.isArray(H.time))return null;
+  const hours=H.time.map((t,i)=>({t,k:WMO[col(H,"weather_code",i)]||"",temp:col(H,"temperature_2m",i),p:col(H,"precipitation_probability",i),w:col(H,"wind_speed_10m",i)}));
+  const days=D&&Array.isArray(D.time)?D.time.map((d,i)=>({d,k:WMO[col(D,"weather_code",i)]||"",min:col(D,"temperature_2m_min",i),max:col(D,"temperature_2m_max",i),p:col(D,"precipitation_probability_max",i)})):[];
+  const m=cleanMeteo({hours,days,updated:at,src:"Open-Meteo",srcUrl:"https://open-meteo.com/"});
+  return m&&m.hours.length?m:null;
+}
+let wxState="loading",wxAt=0;
+try{const c=JSON.parse(localStorage.getItem("groma:meteo")||"null");if(c&&c.j){METEO=fromOpenMeteo(c.j,c.at||"");if(METEO)wxState="ready"}}catch(e){}
+async function loadMeteo(){
+  wxAt=Date.now();
+  try{
+    const r=await fetch(WX_URL);if(!r.ok)throw new Error(r.status);
+    const j=await r.json(),at=stamp(),m=fromOpenMeteo(j,at);if(!m)throw new Error("meteo");
+    METEO=m;wxState="ready";
+    try{localStorage.setItem("groma:meteo",JSON.stringify({j,at}))}catch(e){}
+  }catch(e){if(!METEO)wxState="off"}
+  renderMeteo();renderNow();
+}
+function renderMeteo(){
+  const sec=$("meteo"),box=$("meteoHours"),upd=$("meteoUpd");
+  if(!METEO&&wxState==="off"){sec.hidden=true;return}
+  sec.hidden=false;box.replaceChildren();upd.replaceChildren();
+  if(!METEO){box.append(h("p","empty","Carico il meteo…"));return}
+  const hh=String(Math.floor(NOW.min/60)).padStart(2,"0"),key=`${NOW.iso}T${hh}:00`;
+  const next=METEO.hours.filter(o=>o.t>=key).slice(0,12);
+  next.forEach((o,i)=>{
+    const hour=+o.t.slice(11,13),night=hour<7||hour>=18,isNow=o.t===key,day=o.t.slice(0,10);
+    const c=h("div","hr"+(isNow?" now":""));
+    c.title=o.k||"";
+    c.append(h("b",null,isNow?"Ora":(day!==NOW.iso&&hour===0?GG[isoDow(day)]+" 0":String(hour))+(isNow?"":":00")),wxIcon(wxKind(o.k),night),h("span","t",Math.round(o.temp)+"°"),h("span","p",o.p!=null&&o.p>=10?`${Math.round(o.p)}%`:""));
+    if(o.p!=null&&o.p>=10)c.title=(o.k?o.k+" · ":"")+`probabilità di pioggia ${Math.round(o.p)}%`;
+    box.append(c);
+  });
+  const lastDay=next.length?next[next.length-1].t.slice(0,10):NOW.iso;
+  METEO.days.filter(d=>d.d>lastDay||(d.d>NOW.iso&&!next.length)).slice(0,2).forEach(d=>{
+    const c=h("div","hr day");
+    c.append(h("b",null,d.d===isoAdd(NOW.iso,1)?"Domani":fmtDay(d.d)),wxIcon(wxKind(d.k),false),
+      h("span","t",(d.min!=null?Math.round(d.min)+"° / ":"")+(d.max!=null?Math.round(d.max)+"°":"")),h("span","k",d.k));
+    box.append(c);
+  });
+  if(!box.childNodes.length)box.append(h("p","empty","Previsioni scadute: riapri Groma quando sei connesso."));
+  const up=METEO.updated;
+  if(ISO_RE.test(up.slice(0,10))){
+    const tm=/T(\d{2}):(\d{2})/.exec(up);
+    upd.append(`Aggiornato ${up.slice(0,10)===NOW.iso?"oggi":fmtDay(up.slice(0,10))}${tm?" alle "+(+tm[1])+":"+tm[2]:""}`);
+  }
+  if(METEO.src){upd.append(upd.childNodes.length?" · ":"");if(METEO.srcUrl){const a=h("a",null,METEO.src);a.href=METEO.srcUrl;a.target="_blank";a.rel="noopener";upd.append(a)}else upd.append(METEO.src)}
+}
+
+/* ---------- Adesso: le idee per questo momento ---------- */
+const hourKey=()=>`${NOW.iso}T${String(Math.floor(NOW.min/60)).padStart(2,"0")}:00`;
+const rainSoon=()=>!!METEO&&METEO.hours.filter(o=>o.t>=hourKey()).slice(0,3).some(o=>(o.p!=null&&o.p>=50)||/rain|storm/.test(wxKind(o.k)));
+const toMin=t=>{const[a,b]=t.split(":").map(Number);return a*60+b};
+let PICKS=[];
+function nowPicks(wet){
+  const dry=c=>!(wet&&c==="mercatini");
+  const evs=EVENTS.filter(e=>!isLong(e)&&today(e)&&dry(e.c)&&(!e.h||toMin(e.h)>=NOW.min-30))
+    .sort((a,b)=>(a.h||"99").localeCompare(b.h||"99"))
+    .map(e=>{const pl=evPlace(e);return{k:pl?keyOf(pl):"e:"+e.id,map:!!evPos(e),c:e.c,t:e.t,
+      why:[e.h?"ore "+e.h:"oggi",e.v||(pl&&pl.n)].filter(Boolean).join(" · "),
+      u:e.u||"https://www.google.com/search?q="+encodeURIComponent(e.t+" Roma")}});
+  /* posti aperti ora: prima i salvati, poi una categoria per volta per avere varietà */
+  const seen={};
+  const pls=PLACES.filter(p=>openNow(p)&&dry(p.c)&&!evs.some(x=>x.k===keyOf(p)))
+    .sort((a,b)=>favs.has(keyOf(b))-favs.has(keyOf(a)))
+    .map(p=>({k:keyOf(p),map:true,c:p.c,t:p.n,why:`aperto fino alle ${hm(openNow(p).c)} · ${p.q}`,r:(favs.has(keyOf(p))?0:1)+(seen[p.c]=(seen[p.c]||0)+1)}))
+    .sort((a,b)=>a.r-b.r);
+  return evs.concat(pls);
+}
+function openPick(x){if(x.map)showOnMap(x.k);else window.open(x.u,"_blank","noopener")}
+function renderNow(){
+  const box=$("picks"),wet=rainSoon();
+  PICKS=nowPicks(wet);box.replaceChildren();
+  $("nowNote").hidden=!wet;$("pickBtn").hidden=PICKS.length<2;
+  if(!PICKS.length){box.append(h("li","empty","Adesso è quasi tutto chiuso: guarda cosa c'è in programma qui sotto."));return}
+  PICKS.slice(0,6).forEach(x=>{
+    const b=h("button","pick");b.type="button";b.style.setProperty("--c",`var(--c-${x.c})`);b.onclick=()=>openPick(x);
+    const tx=h("span");tx.append(h("strong",null,x.t),h("small",null,x.why));
+    b.append(shapeIcon(x.c),tx);const li=h("li");li.append(b);box.append(li);
+  });
+}
+$("pickBtn").onclick=()=>{if(PICKS.length)openPick(PICKS[Math.floor(Math.random()*PICKS.length)])};
+
+/* ---------- Elenco dei posti ---------- */
+function renderLists(){
+  const box=$("cats");box.replaceChildren();
+  const vis=visible();
+  if(!vis.length){box.append(h("p","empty","Nessun posto con questi filtri. Cambia ricerca o tocca «Tutte» e «Sempre»."));return}
+  CAT_KEYS.forEach(k=>{
+    const items=vis.filter(p=>p.c===k);if(!items.length)return;
+    const s=h("div","cat");s.style.setProperty("--c",`var(--c-${k})`);
+    const h3=h("h3");h3.append(shapeIcon(k),CATS[k].n);s.append(h3);
+    const ul=h("ul");
+    items.forEach(p=>{
+      const key=keyOf(p),li=h("li"),nm=h("span","nm",p.n);
+      if(p.id)nm.append(h("span","by",byName(p)));
+      if(evTonightAt(p).length)nm.append(h("span","by ev-tag","stasera"));
+      const sm=h("small");if(p.q)sm.append(p.q);
+      const ts=todayShort(p);
+      if(ts){if(p.q)sm.append(" · ");sm.append(openNow(p)?h("span","on",ts):ts)}
+      if(sm.childNodes.length)nm.append(sm);
+      const ia=h("span","ia");
+      const a=h("a",null,p.u?"Sito":"Cerca");a.href=webUrl(p);a.target="_blank";a.rel="noopener";
+      const m=h("button",null,"Mappa");m.type="button";m.onclick=()=>showOnMap(key);
+      const st=h("button","star",favs.has(key)?"★":"☆");st.type="button";st.setAttribute("aria-pressed",favs.has(key));st.setAttribute("aria-label",(favs.has(key)?"Togli dai salvati ":"Salva ")+p.n);
+      st.onclick=()=>{toggleFav(key);if(selKey===key)openSheet(p)};
+      ia.append(a,m,st);
+      li.append(nm,ia);ul.append(li);
+    });
+    s.append(ul);
+    if(EXTRA[k]){const x=h("p","extra"),a=h("a",null,EXTRA[k].t);a.href=EXTRA[k].u;a.target="_blank";a.rel="noopener";x.append(a);s.append(x)}
+    box.append(s);
+  });
+}
+
+/* ---------- Notizie e attualità ---------- */
+const NEWS_K={roma:"Roma",italia:"Italia",mondo:"Mondo",cultura:"Cultura",scienza:"Scienza"};
+const LISTEN=[
+  {t:"SEIETRENTA",s:"Chora Media",w:"Ogni mattina alle 6:30",d:"La rassegna stampa di Chora: le storie del giorno prese da giornali, siti e social.",u:"https://podcasts.apple.com/it/podcast/id1797866685"},
+  {t:"Il Mondo",s:"Internazionale",w:"Ogni mattina alle 6",d:"Il podcast quotidiano di Internazionale: i fatti dal mondo con le voci di chi li segue da vicino.",u:"https://www.internazionale.it/ilmondo"},
+  {t:"Morning",s:"Il Post",w:"Dal lunedì al venerdì · per abbonati",d:"La rassegna stampa del Post: cosa c'è sui giornali e soprattutto perché.",u:"https://www.ilpost.it/podcasts/morning/"},
+  {t:"Prima pagina",s:"Rai Radio3",w:"Ogni mattina",d:"I quotidiani letti e commentati in diretta, con le telefonate degli ascoltatori.",u:"https://www.raiplaysound.it/programmi/primapagina"}
+];
+const READ=[
+  {t:"Il Post",d:"Notizie italiane e dal mondo, spiegate con ordine e senza fretta.",u:"https://www.ilpost.it/"},
+  {t:"Internazionale",d:"Il meglio dei giornali di tutto il mondo, tradotto in italiano.",u:"https://www.internazionale.it/"},
+  {t:"Valigia Blu",d:"Giornalismo indipendente: approfondimenti, verifiche e diritti.",u:"https://www.valigiablu.it/"},
+  {t:"Scomodo",s:"Roma",d:"Il mensile nato a Roma e scritto da under 25: inchieste sulla città, cultura e società.",u:"https://www.leggiscomodo.org/"},
+  {t:"Pagella Politica",d:"Controlla con i dati quello che dicono i politici.",u:"https://pagellapolitica.it/"},
+  {t:"RomaToday",s:"Roma",d:"Cronaca e notizie dai quartieri della città.",u:"https://www.romatoday.it/"}
+];
+let NEWS=null,newsTab="tutte",newsState="loading";
+function cleanNews(x){
+  if(!x||typeof x!=="object")return null;
+  const items=(Array.isArray(x.items)?x.items:[]).slice(0,12).map(o=>o&&typeof o==="object"?{t:str(o.t,140),n:str(o.n,240),u:safeUrl(String(o.u||"")),s:str(o.s,50),k:NEWS_K[o.k]?o.k:"italia"}:null).filter(o=>o&&o.t&&o.u);
+  return{items,updated:typeof x.updated==="string"?x.updated:""};
+}
+function srcCard(o){
+  const a=h("a","src");a.href=o.u;a.target="_blank";a.rel="noopener";
+  a.append(h("strong",null,o.t));if(o.s)a.append(h("span","by2",o.s));if(o.w)a.append(h("span","when2",o.w));a.append(h("span","d2",o.d));
+  return a;
+}
+LISTEN.forEach(o=>$("listen").append(srcCard(o)));
+READ.forEach(o=>$("read").append(srcCard(o)));
+const NTABS=[["tutte","Tutte"],["roma","Roma"],["italia","Italia"],["mondo","Mondo"]];
+NTABS.forEach(([k,l])=>{const b=h("button","tab",l);b.type="button";b.setAttribute("role","tab");b.dataset.k=k;b.onclick=()=>{newsTab=k;renderNews()};$("newsTabs").append(b)});
+function renderNews(){
+  const box=$("newsList"),upd=$("newsUpd"),tabs=$("newsTabs");
+  box.replaceChildren();upd.textContent="";
+  [...tabs.children].forEach(b=>b.setAttribute("aria-selected",String(b.dataset.k===newsTab)));
+  const old=!NEWS||!ISO_RE.test(NEWS.updated.slice(0,10))||isoDiff(NEWS.updated.slice(0,10),NOW.iso)>2;
+  if(!NEWS||!NEWS.items.length||old){tabs.hidden=true;box.append(h("p","empty",!NEWS&&newsState==="loading"?"Carico le notizie…":!NEWS&&newsState==="off"?"Le notizie non si caricano: controlla la connessione. Qui sotto trovi le fonti da cui partire.":"Le notizie di oggi arrivano con l'aggiornamento del mattino. Intanto qui sotto trovi le fonti da cui partire."));return}
+  tabs.hidden=false;
+  const items=NEWS.items.filter(o=>newsTab==="tutte"||o.k===newsTab);
+  if(!items.length)box.append(h("p","empty","Oggi nessuna notizia in questa sezione."));
+  else{
+    const ul=h("ul","news");
+    items.forEach(o=>{const li=h("li","nw");li.dataset.k=o.k;li.append(h("span","nk",NEWS_K[o.k]));const a=h("a","nt",o.t);a.href=o.u;a.target="_blank";a.rel="noopener";li.append(a);if(o.n)li.append(h("p",null,o.n));if(o.s)li.append(h("span","ns",o.s));ul.append(li)});
+    box.append(ul);
+  }
+  const up=NEWS.updated;
+  if(ISO_RE.test(up.slice(0,10))){const tm=/T(\d{2}):(\d{2})/.exec(up);upd.textContent=`Selezione ${up.slice(0,10)===NOW.iso?"di oggi":"del "+fmtDay(up.slice(0,10))}${tm?", ore "+(+tm[1])+":"+tm[2]:""}. Titoli e riassunti scritti per Groma: per i dettagli apri l'articolo.`}
+}
+
+/* ---------- Dati: agenda e notizie dai file del sito ---------- */
+async function getJSON(u){const r=await fetch(u,{cache:"no-cache"});if(!r.ok)throw new Error(r.status);return r.json()}
+let dataAt=0;
+async function loadData(){
+  dataAt=Date.now();
+  try{
+    const a=await getJSON("data/agenda.json");
+    EVENTS=(Array.isArray(a.events)?a.events:[]).map((x,i)=>x&&typeof x==="object"?cleanEv(x.id||"ev"+i,x):null).filter(Boolean);
+    META={updated:a.updated,freq:a.freq};agState="ready";
+  }catch(e){if(agState!=="ready")agState="off"}
+  try{NEWS=cleanNews(await getJSON("data/news.json"));newsState="ready"}catch(e){if(!NEWS)newsState="off"}
+  refresh(false);renderNews();
+}
+
+/* ---------- Avvio ---------- */
+measure();refresh(false);fitTo(all(),false);
+new ResizeObserver(()=>{measure();apply()}).observe(mapbox);
+renderMeteo();renderNews();
+loadData();loadMeteo();
+function tick(){
+  const n=romeNow(),dayChanged=n.iso!==NOW.iso,minChanged=n.min!==NOW.min,hourChanged=Math.floor(n.min/60)!==Math.floor(NOW.min/60);NOW=n;
+  if(dayChanged){setDate();agAuto=true;refresh(false);renderNews()}
+  else if(minChanged&&n.min%5===0){if(when==="ora"||when==="oggi")refresh(false);else renderNow()}
+  if(dayChanged||hourChanged)renderMeteo();
+  if(Date.now()-wxAt>30*60e3)loadMeteo();
+  if(Date.now()-dataAt>3*60*60e3)loadData();
+}
+setInterval(tick,60000);
+/* quando riapri l'app dal telefono: ora, meteo e dati aggiornati */
+document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState!=="visible")return;
+  tick();if(Date.now()-dataAt>15*60e3)loadData();
+});
+const standalone=matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+if(standalone)$("installTip").hidden=true;
+if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost"))navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
