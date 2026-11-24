@@ -1,6 +1,6 @@
 /* Groma: funziona anche offline con gli ultimi dati scaricati.
    Cambia VERSION quando modifichi index.html, così i telefoni scaricano la nuova versione. */
-const VERSION = "groma-2026-11-16a";
+const VERSION = "groma-2026-11-24a";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icons/icon.svg", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];
 
 self.addEventListener("install", e => {

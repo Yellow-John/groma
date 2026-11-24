@@ -232,6 +232,23 @@ section.now{margin:30px 0 0}
 .pick svg{width:16px;height:16px;flex:none}
 .pick strong{display:block;font:800 1.4rem/1 var(--display);text-transform:uppercase}
 .pick small{display:block;color:var(--muted);font-size:.84rem;margin-top:3px}
+/* Oggi a Roma */
+section.oggi{margin:44px 0 0}
+.oggi-h{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 14px;margin:0 0 16px}
+.oggi-h h2{margin:0}
+.cnt{font:800 1.5rem/1 var(--display);text-transform:uppercase;color:var(--walls);white-space:nowrap}
+.warn{margin:-6px 0 16px;padding:10px 14px;border:1.5px solid var(--walls);border-radius:10px;font-size:.9rem;max-width:62ch}
+.warn a{font-weight:600}
+#oggiChips{margin-bottom:6px}
+.slot{margin-top:18px}
+.slot h3{font:800 1.45rem/1 var(--display);text-transform:uppercase;color:var(--walls);margin:0 0 8px}
+.ev.tday{grid-template-columns:70px minmax(0,1fr)}
+.ev.tday .dt{font-size:1.65rem;letter-spacing:.01em}
+.ev .tag{display:inline-block;margin-left:6px;padding:1px 7px;border:1px solid var(--c);border-radius:999px;color:var(--c);font-size:.7rem;font-weight:600;vertical-align:1px}
+.ev.past{opacity:.5}
+.oggi .more{margin-top:12px}
+.oggi .also{margin:16px 0 0;font-size:.9rem;color:var(--muted)}
+.oggi .also button{background:none;border:0;padding:0;color:var(--ink);font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 footer{border-top:1.5px solid var(--line);padding:26px 0 44px;color:var(--muted);font-size:.86rem}
 footer p{margin:0 0 6px;max-width:64ch}
 </style>
@@ -264,6 +281,14 @@ footer p{margin:0 0 6px;max-width:64ch}
   <div class="now-h"><h2 id="nowT">Adesso</h2><button type="button" class="btn" id="pickBtn">Scegli tu</button></div>
   <ul class="picks" id="picks"></ul>
   <p class="upd" id="nowNote" hidden>Pioggia in arrivo: ho tolto i mercatini all'aperto.</p>
+</section>
+
+<section class="oggi" id="oggi" aria-labelledby="oggiT">
+  <div class="oggi-h"><h2 id="oggiT">Oggi a Roma</h2><span class="cnt" id="oggiN"></span></div>
+  <p class="lead">Tutti gli eventi di oggi, dalla mattina a notte fonda, divisi per fascia oraria.</p>
+  <p class="warn" id="oggiStale" hidden></p>
+  <div class="chips" id="oggiChips" role="group" aria-label="Filtra gli eventi di oggi per categoria" hidden></div>
+  <div id="oggiBody"><p class="empty">Carico gli eventi di oggi…</p></div>
 </section>
 
 <div class="tools">
@@ -542,7 +567,7 @@ function metroRow(pos){
 const CAT_KEYS=Object.keys(CATS);
 let active=new Set(CAT_KEYS), favOnly=false, query="", selKey=null, when="all";
 let friends=[], names={};
-let EVENTS=[], META=null, agState="loading", agTab="oggi", agAuto=true, agMore=false;
+let EVENTS=[], META=null, agState="loading", agTab="domani", agAuto=true, agMore=false;
 let favs=new Set();
 try{favs=new Set(JSON.parse(localStorage.getItem("groma:salvati")||"[]"))}catch(e){}
 const saveFavs=()=>{try{localStorage.setItem("groma:salvati",JSON.stringify([...favs]))}catch(e){}};
@@ -822,20 +847,20 @@ function refresh(){
     const still=isEv?EVENTS.some(e=>"e:"+e.id===selKey&&evMatch(e)):visible().some(p=>keyOf(p)===selKey);
     if(!still){selKey=null;mapbox.classList.remove("sheet-open")}
   }
-  renderPins();renderLists();updateChips();renderAgenda();renderNow();
+  renderPins();renderLists();updateChips();renderAgenda();renderToday();renderNow();
   $("hint").textContent=visible().length?"Trascina per muoverti, tocca un punto":"Nessun posto con questi filtri";
 }
 
 /* ---------- Agenda dinamica ---------- */
-const TABS=[["oggi","Oggi"],["domani","Domani"],["weekend","Weekend"],["sette","Prossimi 7 giorni"]];
+/* gli eventi di oggi hanno la loro sezione («Oggi a Roma»): qui si parte da domani */
+const TABS=[["domani","Domani"],["weekend","Weekend"],["sette","Prossimi 7 giorni"]];
 const tabEls={};
 TABS.forEach(([k,l])=>{const b=h("button","tab",l);b.type="button";b.setAttribute("role","tab");b.onclick=()=>{agTab=k;agAuto=false;renderAgenda()};tabEls[k]=b;$("agTabs").append(b)});
 function tabRange(t){
   const T=NOW.iso,d=NOW.dow;
-  if(t==="oggi")return[T,T];
   if(t==="domani"){const x=isoAdd(T,1);return[x,x]}
   if(t==="weekend")return d<=5?[isoAdd(T,5-d),isoAdd(T,7-d)]:[T,isoAdd(T,7-d)];
-  return[T,isoAdd(T,6)];
+  return[isoAdd(T,1),isoAdd(T,7)];
 }
 function evRow(e,R,long){
   const li=h("li","ev");li.style.setProperty("--c",`var(--c-${e.c})`);
@@ -865,17 +890,17 @@ function renderAgenda(){
     upd.textContent="";return;
   }
   const live=EVENTS.filter(e=>evEnd(e)>=NOW.iso&&evMatch(e));
-  if(agAuto){agAuto=false;if(!live.some(e=>!isLong(e)&&today(e)))agTab="sette"}
+  if(agAuto){agAuto=false;agTab=live.some(e=>!isLong(e)&&inRange(e,tabRange("domani")))?"domani":"sette"}
   TABS.forEach(([k])=>tabEls[k].setAttribute("aria-selected",String(k===agTab)));
   const R=tabRange(agTab);
   const inT=live.filter(e=>inRange(e,R));
   const shorts=inT.filter(e=>!isLong(e)).sort((a,b)=>{const fa=a.d<R[0]?R[0]:a.d,fb=b.d<R[0]?R[0]:b.d;return fa<fb?-1:fa>fb?1:(a.h||"99").localeCompare(b.h||"99")});
   const longs=inT.filter(isLong).sort((a,b)=>evEnd(a)<evEnd(b)?-1:evEnd(a)>evEnd(b)?1:0);
   if(!EVENTS.length)box.append(h("p","empty","L'agenda è ancora vuota: si riempie al prossimo aggiornamento."));
-  else if(!shorts.length)box.append(h("p","empty",agTab==="oggi"?"Oggi non c'è niente in agenda con questi filtri: guarda i prossimi giorni.":"Nessun evento in questo periodo con i filtri scelti."));
+  else if(!shorts.length)box.append(h("p","empty",agTab==="domani"?"Domani non c'è ancora niente in agenda con questi filtri: guarda i prossimi giorni.":"Nessun evento in questo periodo con i filtri scelti."));
   else{const ul=h("ul","evs");shorts.forEach(e=>ul.append(evRow(e,R,false)));box.append(ul)}
   if(longs.length){
-    const wrap=h("div","ongoing");wrap.append(h("h3",null,"Mostre e festival in corso"));
+    const wrap=h("div","ongoing");wrap.id="inCorso";wrap.append(h("h3",null,"Mostre e festival in corso"));
     const ul=h("ul","evs"),LIM=4;
     longs.forEach((e,i)=>{const li=evRow(e,R,true);if(!agMore&&i>=LIM)li.hidden=true;ul.append(li)});
     wrap.append(ul);
@@ -884,6 +909,81 @@ function renderAgenda(){
   }
   const up=META&&typeof META.updated==="string"&&ISO_RE.test(META.updated.slice(0,10))?META.updated.slice(0,10):"";
   upd.textContent=up?`Agenda aggiornata ${fmtDay(up)} · si aggiorna da sola ${str(META.freq,40)||"ogni settimana"}.`:"";
+}
+
+/* ---------- Oggi a Roma: tutti gli eventi del giorno ---------- */
+let oggiCat="all", oggiPast=false;
+const SLOTS=[["Mattina e pomeriggio",0,18*60],["Sera",18*60,22*60],["Notte",22*60,1440]];
+const isShowCat=c=>c!=="mostre"&&c!=="fotografia";
+const isPast=e=>!!e.h&&!isLong(e)&&toMin(e.h)<NOW.min-120;
+function todaySets(){
+  const act=EVENTS.filter(today);
+  const opens=e=>isLong(e)&&e.d===NOW.iso;
+  return{
+    main:act.filter(e=>!isLong(e)||opens(e)),                 /* eventi del giorno e inaugurazioni */
+    runs:act.filter(e=>isLong(e)&&!opens(e)&&isShowCat(e.c)), /* spettacoli in replica e festival */
+    expo:act.filter(e=>isLong(e)&&!opens(e)&&!isShowCat(e.c)) /* mostre aperte */
+  };
+}
+function todayRow(e){
+  const li=h("li","ev tday"+(isPast(e)?" past":""));li.style.setProperty("--c",`var(--c-${e.c})`);
+  const dt=h("div","dt");
+  if(e.h)dt.append(h("b",null,"ore"),e.h);else dt.append(h("b",null,isLong(e)?"fino al":"orario"),isLong(e)?String(isoParts(evEnd(e))[2]):"",h("small",null,isLong(e)?MM[isoParts(evEnd(e))[1]-1]:"sul sito"));
+  const tl=h("strong",null,e.t);li.append(dt,tl);
+  const meta=h("div","meta");meta.append(h("span","k",CATS[e.c].n));
+  const pl=evPlace(e);
+  const bits=[e.v||(pl&&pl.n)||"",e.e&&(!isLong(e)||e.h)?"fino al "+fmtShort(e.e):""].filter(Boolean);
+  if(bits.length)meta.append(" · "+bits.join(" · "));
+  if(isLong(e)&&e.d===NOW.iso)meta.append(h("span","tag",isShowCat(e.c)?"da oggi":"inaugura oggi"));
+  else if(e.d===NOW.iso&&e.e&&!isLong(e))meta.append(h("span","tag","prima data"));
+  li.append(meta);
+  if(e.n)li.append(h("p",null,e.n));
+  const ia=h("div","ia");
+  const a=h("a",null,e.u?"Info":"Cerca");a.href=e.u||("https://www.google.com/search?q="+encodeURIComponent(e.t+" "+(e.v||"")+" Roma"));a.target="_blank";a.rel="noopener";ia.append(a);
+  if(pl||e.lat!=null){const m=h("button",null,"Mappa");m.type="button";m.onclick=()=>showOnMap(pl?keyOf(pl):"e:"+e.id);ia.append(m)}
+  const w=h("a",null,"Andiamo?");w.href=waUrl(evWa(e));w.target="_blank";w.rel="noopener";ia.append(w);
+  li.append(ia);
+  return li;
+}
+function agendaLinks(p){AGENDA.forEach((x,i)=>{if(i)p.append(", ");const a=h("a",null,x.t);a.href=x.u;a.target="_blank";a.rel="noopener";p.append(a)})}
+function renderToday(){
+  const box=$("oggiBody"),chips=$("oggiChips"),cnt=$("oggiN"),warn=$("oggiStale");
+  box.replaceChildren();chips.replaceChildren();cnt.textContent="";warn.replaceChildren();warn.hidden=true;chips.hidden=true;
+  if(agState!=="ready"){box.append(h("p","empty",agState==="loading"?"Carico gli eventi di oggi…":"Gli eventi non si caricano: controlla la connessione."));return}
+  const up=META&&typeof META.updated==="string"&&ISO_RE.test(META.updated.slice(0,10))?META.updated.slice(0,10):"";
+  /* il Radar aggiorna verso le 8: prima delle 10 un'agenda di ieri è normale */
+  if(up&&up<NOW.iso&&(up<isoAdd(NOW.iso,-1)||NOW.min>=10*60)){
+    warn.append(`L'agenda è ferma a ${up===isoAdd(NOW.iso,-1)?"ieri":fmtDay(up)}: gli eventi di oggi potrebbero essere pochi. Guarda anche `);agendaLinks(warn);warn.append(".");warn.hidden=false;
+  }
+  const{main,runs,expo}=todaySets();
+  const total=main.length+runs.length;
+  if(!total){
+    const p=h("p","empty","Per oggi in agenda non c'è ancora niente. Intanto prova con ");agendaLinks(p);p.append(".");box.append(p);
+  }else{
+    cnt.textContent=total===1?"1 evento":total+" eventi";
+    const pool=main.concat(runs);
+    if(!pool.some(e=>e.c===oggiCat))oggiCat="all";
+    const mk=(k,label,n,icon)=>{const b=mkChip(chips,k==="all"?"all":"cat",label,icon);b.querySelector(".n").textContent=n;b.setAttribute("aria-pressed",String(oggiCat===k||(k!=="all"&&oggiCat==="all")));if(k!=="all")b.style.setProperty("--c",`var(--c-${k})`);b.onclick=()=>{oggiCat=oggiCat===k?"all":k;renderToday()}};
+    mk("all","Tutte",total);
+    CAT_KEYS.forEach(k=>{const n=pool.filter(e=>e.c===k).length;if(n)mk(k,CATS[k].n,n,shapeIcon(k))});
+    chips.hidden=false;
+    const pass=e=>oggiCat==="all"||e.c===oggiCat;
+    const list=main.filter(pass).sort((a,b)=>(a.h||"99").localeCompare(b.h||"99"));
+    const past=list.filter(isPast);
+    const shown=oggiPast?list:list.filter(e=>!isPast(e));
+    const slot=(title,items)=>{if(!items.length)return;const s=h("div","slot");s.append(h("h3",null,title));const ul=h("ul","evs");items.forEach(e=>ul.append(todayRow(e)));s.append(ul);box.append(s)};
+    SLOTS.forEach(([t,a,b])=>slot(t,shown.filter(e=>e.h&&toMin(e.h)>=a&&toMin(e.h)<b)));
+    slot("Orario da controllare",shown.filter(e=>!e.h));
+    slot("In scena e festival",runs.filter(pass).sort((a,b)=>evEnd(a)<evEnd(b)?-1:1));
+    if(!shown.length&&!runs.filter(pass).length)box.append(h("p","empty",past.length?"Gli eventi di oggi in questa categoria sono già iniziati.":"Oggi niente in questa categoria."));
+    if(past.length&&!oggiPast){const b=h("button","more",past.length===1?"Mostra anche quello già iniziato":`Mostra anche i ${past.length} già iniziati`);b.type="button";b.onclick=()=>{oggiPast=true;renderToday()};box.append(b)}
+  }
+  if(expo.length){
+    const p=h("p","also",`E poi ${expo.length===1?"una mostra aperta":expo.length+" mostre aperte"} oggi: `);
+    const b=h("button",null,"le trovi in «In programma»");b.type="button";
+    b.onclick=()=>{agMore=true;renderAgenda();const t=$("inCorso")||$("programma");t.scrollIntoView({behavior:reduce?"auto":"smooth",block:"start"})};
+    p.append(b);box.append(p);
+  }
 }
 
 /* ---------- Agende esterne (riga compatta) ---------- */
@@ -1128,8 +1228,8 @@ renderMeteo();renderNews();
 loadData();loadMeteo();
 function tick(){
   const n=romeNow(),dayChanged=n.iso!==NOW.iso,minChanged=n.min!==NOW.min,hourChanged=Math.floor(n.min/60)!==Math.floor(NOW.min/60);NOW=n;
-  if(dayChanged){setDate();agAuto=true;refresh(false);renderNews()}
-  else if(minChanged&&n.min%5===0){if(when==="ora"||when==="oggi")refresh(false);else renderNow()}
+  if(dayChanged){setDate();agAuto=true;oggiPast=false;refresh(false);renderNews()}
+  else if(minChanged&&n.min%5===0){if(when==="ora"||when==="oggi")refresh(false);else{renderNow();renderToday()}}
   if(dayChanged||hourChanged)renderMeteo();
   if(Date.now()-wxAt>30*60e3)loadMeteo();
   if(Date.now()-dataAt>3*60*60e3)loadData();
